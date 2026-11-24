@@ -20,7 +20,8 @@ import { artFor } from './art';
     @if (showImage()) {
       <img
         [src]="image()!.small"
-        [attr.srcset]="image()!.small + ' 1x, ' + image()!.large + ' 2x'"
+        [attr.srcset]="srcset()"
+        [attr.sizes]="sizes()"
         alt=""
         [attr.loading]="eager() ? 'eager' : 'lazy'"
         decoding="async"
@@ -92,8 +93,20 @@ export class Poster {
   readonly ratio = input<'poster' | 'backdrop' | 'fill'>('poster');
   readonly showTitle = input(true);
   readonly eager = input(false);
+  /**
+   * Larguras reais (px) de small/large, ex.: [780, 1280] para backdrop.
+   * Com elas e `sizes`, o navegador escolhe pela largura exibida; sem elas, usa 1x/2x.
+   */
+  readonly widths = input<[number, number] | null>(null);
+  readonly sizes = input<string | null>(null);
 
   protected readonly failed = signal(false);
   protected readonly art = computed(() => artFor(this.seed()));
   protected readonly showImage = computed(() => !!this.image() && !this.failed());
+  protected readonly srcset = computed(() => {
+    const img = this.image();
+    if (!img) return null;
+    const w = this.widths();
+    return w ? `${img.small} ${w[0]}w, ${img.large} ${w[1]}w` : `${img.small} 1x, ${img.large} 2x`;
+  });
 }

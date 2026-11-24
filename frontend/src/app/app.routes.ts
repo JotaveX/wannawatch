@@ -13,8 +13,8 @@ export const routes: Routes = [
   {
     path: '',
     title: 'wannawatch?',
-    loadComponent: placeholder,
-    data: { ...cinema, heading: 'Início', message: 'A Home estilo Netflix chega na próxima fase.', icon: 'home' },
+    loadComponent: () => import('./features/home/home-page').then((m) => m.HomePage),
+    data: cinema,
   },
   {
     path: 'swipe',

@@ -97,9 +97,10 @@ Organização (`src/app`):
 | `core/api` | Contratos da API (`models.ts`) e o cliente `CatalogApi`: o único lugar que fala com o back |
 | `mocks` | `SocialMock`: tudo que é de grupo/usuário (% match, grupo, continue assistindo). Trocar aqui quando existir back-end para isso |
 | `shared/ui` | Componentes base: logo, botões, botão redondo, seletor segmentado, pôster com placeholder, ícones |
-| `layout` | Barra de abas (celular) e barra lateral estilo TikTok (desktop) |
+| `layout` | Barra de abas (celular), barra lateral estilo TikTok (desktop) e menu do topo das telas escuras |
 | `features` | Uma pasta por tela |
 | `src/styles` | Design tokens (`tokens.css`) e estilos base |
+| `src/testing` | Dados de exemplo para os testes |
 
 ## Importação da TMDB
 
