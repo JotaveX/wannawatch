@@ -1,0 +1,122 @@
+:host {
+  display: block;
+  height: 100%;
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+}
+article {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  height: 100%;
+  padding: 0 12px 22px 20px;
+  overflow: hidden;
+  background: var(--ww-bg-dark);
+  color: var(--ww-white);
+}
+.bg {
+  position: absolute !important;
+  inset: 0;
+}
+/* camada chapada: texto branco ≥ 4,5:1 sobre qualquer pôster (mesma conta da Home) */
+.shade {
+  position: absolute;
+  inset: 0;
+  background: rgba(20, 20, 22, 0.62);
+}
+.text {
+  position: relative;
+  flex-grow: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.kicker {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.synopsis {
+  font-family: var(--ww-font-display);
+  font-weight: 600;
+  font-size: clamp(19px, 2.6vh, 25px);
+  line-height: 1.22;
+  letter-spacing: -0.03em;
+  display: -webkit-box;
+  -webkit-line-clamp: 9;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.name {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 4px;
+}
+h2 {
+  font-family: var(--ww-font-ui);
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: 0;
+}
+.name span {
+  font-size: 13px;
+}
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.outline {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  padding: 0 12px;
+  border: var(--ww-hairline) solid var(--ww-white);
+  border-radius: var(--ww-radius-pill);
+  color: var(--ww-white);
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+}
+.actions {
+  position: relative;
+  flex-shrink: 0;
+  width: 64px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding-bottom: 4px;
+}
+.actions div {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 600;
+}
+.round {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--ww-glass-light);
+  color: var(--ww-graphite);
+  cursor: pointer;
+  transition: transform var(--ww-fast) var(--ww-ease);
+}
+.round:active {
+  transform: scale(0.92);
+}
+.round.on {
+  background: var(--ww-pink);
+  color: var(--ww-white);
+}

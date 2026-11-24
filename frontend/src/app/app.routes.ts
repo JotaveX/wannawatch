@@ -25,8 +25,8 @@ export const routes: Routes = [
   {
     path: 'reels',
     title: 'Reels · wannawatch?',
-    loadComponent: placeholder,
-    data: { ...feed('dark'), heading: 'Reels', message: 'O feed de sinopses chega na fase 8.', icon: 'reels' },
+    loadComponent: () => import('./features/reels/reels-page').then((m) => m.ReelsPage),
+    data: feed('dark'),
   },
   {
     path: 'filme/:id',
