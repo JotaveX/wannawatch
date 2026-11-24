@@ -1,0 +1,99 @@
+/*
+ * Design tokens — direção "Pipoca Pop, clean".
+ * Cores chapadas, bordas finas, muito espaço. Sem glow, sem degradê, sem sombra colorida.
+ *
+ * Breakpoints (CSS não aceita variável em media query, então ficam documentados aqui):
+ *   celular  < 768px
+ *   tablet   768px – 1023px
+ *   desktop  ≥ 1024px  (barra lateral estilo TikTok no Swipe/Reels)
+ */
+:root {
+  /* Paleta */
+  --ww-pink: #ff2d55;             /* marca: "?" do logo, quero ver, progresso */
+  --ww-pink-strong: #d70f45;      /* texto branco sobre pink (contraste 5:1) e texto pink sobre claro */
+  --ww-yellow: #ffc300;           /* destaques, pôsteres, avatar */
+  --ww-yellow-strong: #b38600;    /* "?" do talvez sobre branco (texto grande, 3:1) */
+  --ww-indigo: #5e5ce6;           /* pôsteres, fundo do destaque da Home */
+  --ww-graphite: #1d1d1f;         /* texto principal no claro */
+  --ww-gray-text: #6e6e73;        /* texto secundário no claro */
+  --ww-border: #e5e5ea;           /* bordas finas */
+  --ww-surface-gray: #f2f2f7;     /* seletores segmentados, superfícies */
+  --ww-bg-light: #fbfbfd;         /* fundo do Swipe e do Reels */
+  --ww-bg-dark: #141416;          /* fundo da Home */
+  --ww-surface-dark: #2c2c2e;
+  --ww-text-on-dark: #f5f5f7;
+  --ww-text-on-dark-2: #a1a1a6;
+  --ww-link-on-dark: #ff6b88;     /* link no escuro */
+  --ww-white: #ffffff;
+
+  /* Translúcidos (sem blur) */
+  --ww-glass-dark: rgba(20, 20, 22, 0.55);
+  --ww-glass-light: rgba(255, 255, 255, 0.92);
+
+  /* Tipografia */
+  --ww-font-display: 'Inter Tight', 'Inter', system-ui, -apple-system, sans-serif;
+  --ww-font-ui: 'Inter', system-ui, -apple-system, sans-serif;
+  --ww-tracking-display: -0.035em;
+  --ww-tracking-logo: -0.045em;
+  --ww-tracking-huge: -0.05em;
+
+  /* Forma */
+  --ww-radius-xs: 6px;
+  --ww-radius-sm: 10px;
+  --ww-radius-md: 16px;
+  --ww-radius-lg: 24px;
+  --ww-radius-xl: 32px;
+  --ww-radius-pill: 999px;
+  --ww-hairline: 1px;
+
+  /* Espaço */
+  --ww-space-1: 4px;
+  --ww-space-2: 8px;
+  --ww-space-3: 12px;
+  --ww-space-4: 16px;
+  --ww-space-5: 20px;
+  --ww-space-6: 24px;
+  --ww-space-8: 32px;
+  --ww-space-10: 40px;
+  --ww-space-14: 56px;
+  --ww-page-x: clamp(16px, 4vw, 56px);
+
+  /* Sombra: só a sutil do seletor segmentado */
+  --ww-shadow-segment: 0 1px 2px rgba(0, 0, 0, 0.08);
+
+  /* Acessibilidade */
+  --ww-touch: 44px;
+
+  /* Layout */
+  --ww-tabbar-h: 64px;
+  --ww-sidenav-w: 240px;
+
+  /* Movimento */
+  --ww-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ww-fast: 150ms;
+}
+
+/* Tokens semânticos por tema. A Home é escura; Swipe e Reels são claros. */
+[data-theme='light'] {
+  --bg: var(--ww-bg-light);
+  --surface: var(--ww-white);
+  --surface-2: var(--ww-surface-gray);
+  --text: var(--ww-graphite);
+  --text-2: var(--ww-gray-text);
+  --border: var(--ww-border);
+  --link: var(--ww-pink-strong);
+  --focus-ring: var(--ww-pink-strong);
+  color-scheme: light;
+}
+
+[data-theme='dark'] {
+  --bg: var(--ww-bg-dark);
+  --surface: var(--ww-graphite);
+  --surface-2: var(--ww-surface-dark);
+  --text: var(--ww-text-on-dark);
+  --text-2: var(--ww-text-on-dark-2);
+  --border: rgba(255, 255, 255, 0.14);
+  --link: var(--ww-link-on-dark);
+  --focus-ring: var(--ww-white);
+  color-scheme: dark;
+}
