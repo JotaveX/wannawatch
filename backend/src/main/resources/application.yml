@@ -54,3 +54,13 @@ wannawatch:
       - { key: popular_series, path: /tv/popular,       media-type: SERIES, pages: 5 }
       - { key: top_movie,      path: /movie/top_rated,  media-type: MOVIE,  pages: 5 }
       - { key: top_series,     path: /tv/top_rated,     media-type: SERIES, pages: 5 }
+    # A TMDB não traduz estes gêneros de série para pt-BR.
+    genre-names:
+      "10759": Ação e aventura
+      "10762": Infantil
+      "10763": Notícias
+      "10764": Reality show
+      "10765": Ficção científica e fantasia
+      "10766": Novela
+      "10767": Talk show
+      "10768": Guerra e política

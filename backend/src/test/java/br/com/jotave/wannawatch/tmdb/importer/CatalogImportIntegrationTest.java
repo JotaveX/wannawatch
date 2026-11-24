@@ -70,8 +70,12 @@ class CatalogImportIntegrationTest {
                 .containsEntry("name", "Drama").containsEntry("for_movie", true).containsEntry("for_series", true);
         assertThat(jdbc.sql("SELECT count(*) FROM genre").query(Integer.class).single()).isEqualTo(4);
 
+        // Gênero que a TMDB não traduz recebe o nome configurado
+        assertThat(jdbc.sql("SELECT name FROM genre WHERE external_id = 10765").query(String.class).single())
+                .isEqualTo("Ficção científica e fantasia");
+
         // N:N título × gênero
-        assertThat(genreSlugsOf(202, "SERIES")).containsExactlyInAnyOrder("drama", "comedia", "sci-fi-e-fantasy");
+        assertThat(genreSlugsOf(202, "SERIES")).containsExactlyInAnyOrder("drama", "comedia", "ficcao-cientifica-e-fantasia");
         assertThat(genreSlugsOf(101, "MOVIE")).containsExactlyInAnyOrder("ficcao-cientifica", "drama");
 
         // Pessoa que está nos dois títulos é gravada uma vez só

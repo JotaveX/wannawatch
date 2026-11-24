@@ -94,7 +94,7 @@ public class CatalogImporter {
         }
         log.info("Importação da TMDB iniciada ({})", reason);
         try {
-            int genreCount = writer.upsertGenres(tmdb.movieGenres(), tmdb.tvGenres());
+            int genreCount = writer.upsertGenres(tmdb.movieGenres(), tmdb.tvGenres(), props.genreNames());
 
             Map<String, List<Ref>> lists = new LinkedHashMap<>();
             for (ImportProperties.ListSpec spec : props.lists()) {

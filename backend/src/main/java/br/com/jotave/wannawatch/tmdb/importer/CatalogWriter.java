@@ -45,10 +45,11 @@ public class CatalogWriter {
 
     /**
      * Junta as listas de gêneros de filme e de série. Um id que aparece nas duas vira uma linha
-     * só, com as duas flags. O nome da lista de filmes tem preferência.
+     * só, com as duas flags. O nome da lista de filmes tem preferência, e {@code nameOverrides}
+     * (gêneros que a TMDB não traduz) tem preferência sobre tudo.
      */
     @Transactional
-    public int upsertGenres(TmdbDto.GenreList movie, TmdbDto.GenreList tv) {
+    public int upsertGenres(TmdbDto.GenreList movie, TmdbDto.GenreList tv, Map<Integer, String> nameOverrides) {
         record Merged(String name, boolean forMovie, boolean forSeries) {}
         Map<Integer, Merged> merged = new LinkedHashMap<>();
         for (TmdbDto.Genre g : movie.genres()) {
@@ -69,12 +70,13 @@ public class CatalogWriter {
         List<Genre> toSave = new ArrayList<>();
         merged.forEach((extId, m) -> {
             Genre g = existing.getOrDefault(extId, new Genre(extId));
-            String slug = TmdbMapper.slug(m.name());
+            String name = nameOverrides.getOrDefault(extId, m.name()).trim();
+            String slug = TmdbMapper.slug(name);
             if (!usedSlugs.add(slug)) {
                 slug = slug + "-" + extId;
                 usedSlugs.add(slug);
             }
-            g.setName(m.name().trim());
+            g.setName(name);
             g.setSlug(slug);
             g.setForMovie(m.forMovie());
             g.setForSeries(m.forSeries());
