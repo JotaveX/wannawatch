@@ -21,6 +21,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -33,14 +34,16 @@ public class CatalogWriter {
     private final PersonRepository people;
     private final TitleCreditRepository credits;
     private final TitleRankingRepository rankings;
+    private final JdbcClient jdbc;
 
     public CatalogWriter(GenreRepository genres, TitleRepository titles, PersonRepository people,
-                         TitleCreditRepository credits, TitleRankingRepository rankings) {
+                         TitleCreditRepository credits, TitleRankingRepository rankings, JdbcClient jdbc) {
         this.genres = genres;
         this.titles = titles;
         this.people = people;
         this.credits = credits;
         this.rankings = rankings;
+        this.jdbc = jdbc;
     }
 
     /**
@@ -112,9 +115,9 @@ public class CatalogWriter {
         t.setRevenue(in.revenue());
         t.setTrailerYoutubeKey(in.trailerYoutubeKey());
         t.setDetails(in.details());
-        t.replaceGenres(new HashSet<>(genres.findByExternalIdIn(in.genreExternalIds())));
         t.markSynced(now);
         t = titles.save(t);
+        replaceGenres(t.getId(), in.genreExternalIds());
 
         credits.deleteByTitleId(t.getId());
         Map<Integer, Person> persons = upsertPeople(in.credits());
@@ -137,6 +140,20 @@ public class CatalogWriter {
             rows.add(new TitleRanking(listKey, i + 1, titles.getReferenceById(titleIds.get(i)), now));
         }
         rankings.saveAll(rows);
+    }
+
+    /** Grava os gêneros do título na ordem em que a TMDB mandou (o principal primeiro). */
+    private void replaceGenres(Long titleId, List<Integer> externalIds) {
+        jdbc.sql("DELETE FROM title_genre WHERE title_id = :id").param("id", titleId).update();
+        Map<Integer, Long> idByExternal = genres.findByExternalIdIn(externalIds).stream()
+                .collect(Collectors.toMap(Genre::getExternalId, Genre::getId));
+        int position = 0;
+        for (Integer ext : externalIds) {
+            Long genreId = idByExternal.get(ext);
+            if (genreId == null) continue; // gênero fora das listas oficiais da TMDB
+            jdbc.sql("INSERT INTO title_genre (title_id, genre_id, position) VALUES (:t, :g, :p)")
+                    .param("t", titleId).param("g", genreId).param("p", position++).update();
+        }
     }
 
     private Map<Integer, Person> upsertPeople(List<ImportedTitle.Credit> list) {

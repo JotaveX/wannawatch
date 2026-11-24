@@ -7,18 +7,16 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.JoinTable;
-import jakarta.persistence.ManyToMany;
 import jakarta.persistence.Table;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.util.HashSet;
-import java.util.Set;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
-/** Um filme ou uma série. Colunas específicas de cada tipo são opcionais. */
+/**
+ * Um filme ou uma série. Colunas específicas de cada tipo são opcionais.
+ * Os gêneros (tabela title_genre, com a ordem da TMDB) são gravados pelo importador e lidos por SQL.
+ */
 @Entity
 @Table(name = "title")
 public class Title {
@@ -90,13 +88,6 @@ public class Title {
     @Column(nullable = false, columnDefinition = "jsonb")
     private TitleDetails details = TitleDetails.empty();
 
-    @ManyToMany
-    @JoinTable(
-            name = "title_genre",
-            joinColumns = @JoinColumn(name = "title_id"),
-            inverseJoinColumns = @JoinColumn(name = "genre_id"))
-    private Set<Genre> genres = new HashSet<>();
-
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt = Instant.now();
 
@@ -116,11 +107,6 @@ public class Title {
     public void markSynced(Instant when) {
         this.lastSyncedAt = when;
         this.updatedAt = when;
-    }
-
-    public void replaceGenres(Set<Genre> newGenres) {
-        this.genres.clear();
-        this.genres.addAll(newGenres);
     }
 
     public Long getId() { return id; }
@@ -166,7 +152,6 @@ public class Title {
     public void setTrailerYoutubeKey(String trailerYoutubeKey) { this.trailerYoutubeKey = trailerYoutubeKey; }
     public TitleDetails getDetails() { return details; }
     public void setDetails(TitleDetails details) { this.details = details; }
-    public Set<Genre> getGenres() { return genres; }
     public Instant getCreatedAt() { return createdAt; }
     public Instant getUpdatedAt() { return updatedAt; }
     public Instant getLastSyncedAt() { return lastSyncedAt; }
