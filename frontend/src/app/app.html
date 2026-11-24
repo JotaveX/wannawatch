@@ -1,5 +1,11 @@
-<main class="placeholder">
-  <h1>wannawatch<span>?</span></h1>
-  <p>Fundação no ar. As telas chegam nas próximas fases.</p>
-</main>
-<router-outlet />
+<a class="skip-link" href="#conteudo">Pular para o conteúdo</a>
+
+<div class="shell" [class.shell--feed]="feed()">
+  @if (feed()) {
+    <ww-side-nav class="side" />
+  }
+  <main id="conteudo" tabindex="-1">
+    <router-outlet />
+  </main>
+  <ww-tab-bar class="tabs" />
+</div>

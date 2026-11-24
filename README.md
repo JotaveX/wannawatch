@@ -87,6 +87,20 @@ npm start          # http://localhost:4200
 npm test -- --watch=false
 ```
 
+- A URL da API fica em `src/environments/` (dev: `http://localhost:8081/api`).
+- Vitrine dos componentes (só em dev): <http://localhost:4200/dev/componentes>.
+
+Organização (`src/app`):
+
+| Pasta | O que tem |
+|---|---|
+| `core/api` | Contratos da API (`models.ts`) e o cliente `CatalogApi`: o único lugar que fala com o back |
+| `mocks` | `SocialMock`: tudo que é de grupo/usuário (% match, grupo, continue assistindo). Trocar aqui quando existir back-end para isso |
+| `shared/ui` | Componentes base: logo, botões, botão redondo, seletor segmentado, pôster com placeholder, ícones |
+| `layout` | Barra de abas (celular) e barra lateral estilo TikTok (desktop) |
+| `features` | Uma pasta por tela |
+| `src/styles` | Design tokens (`tokens.css`) e estilos base |
+
 ## Importação da TMDB
 
 O back-end busca filmes e séries na TMDB e grava no nosso banco; o front só fala com o back.
