@@ -25,6 +25,11 @@ spring:
 server:
   port: ${BACKEND_PORT:8081}
 
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+  paths-to-match: /api/**
+
 management:
   endpoints:
     web:
@@ -35,6 +40,12 @@ management:
 # TMDB e importação
 # ---------------------------------------------------------------------------
 wannawatch:
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:4200}
+  images:
+    base-url: https://image.tmdb.org/t/p
+  search:
+    similarity-threshold: 0.6   # 0 a 1; maior = menos resultados parecidos
   tmdb:
     base-url: https://api.themoviedb.org/3
     api-token: ${TMDB_API_TOKEN:}
