@@ -20,8 +20,12 @@ Maven e Angular CLI não precisam estar instalados: o back usa o wrapper (`./mvn
 cp .env.example .env
 ```
 
-O `.env` fica fora do git. Ele é lido pelo docker-compose e pelo back-end.
-A chave da TMDB (`TMDB_API_TOKEN`) só será necessária a partir da fase de importação.
+O `.env` fica fora do git. Ele é lido pelo docker-compose e pelo back-end. Preencha:
+
+- `TMDB_API_TOKEN`: o **API Read Access Token** da sua conta em
+  <https://www.themoviedb.org/settings/api> (uso não comercial é gratuito).
+- `ADMIN_TOKEN`: qualquer valor secreto; protege o endpoint que dispara a importação.
+  Gere um com `openssl rand -hex 16`. Vazio = endpoint desligado.
 
 Portas padrão (mude no `.env` se precisar):
 
@@ -66,4 +70,41 @@ npm test -- --watch=false
 
 ## Importação da TMDB
 
-_Em construção (fase 2)._
+O back-end busca filmes e séries na TMDB e grava no nosso banco; o front só fala com o back.
+A importação roda de três jeitos:
+
+1. **Automática na primeira subida**: se o banco não tiver nenhum título, ela dispara sozinha
+   ao iniciar o back (leva menos de 1 minuto).
+2. **Agendada**: todo dia às 4h (`wannawatch.import.cron` no `application.yml`; `"-"` desliga).
+3. **Manual**, pelo endpoint de admin:
+
+   ```bash
+   source .env
+   curl -X POST -H "X-Admin-Token: $ADMIN_TOKEN" localhost:8081/api/admin/import   # dispara (202)
+   curl -H "X-Admin-Token: $ADMIN_TOKEN" localhost:8081/api/admin/import            # status e último resultado
+   ```
+
+O que é importado (configurável em `wannawatch.import.lists`):
+
+| Lista            | Origem na TMDB       | Páginas (20 por página) |
+|------------------|----------------------|-------------------------|
+| `trending_day`   | `/trending/all/day`  | 2                       |
+| `popular_movie`  | `/movie/popular`     | 5                       |
+| `popular_series` | `/tv/popular`        | 5                       |
+| `top_movie`      | `/movie/top_rated`   | 5                       |
+| `top_series`     | `/tv/top_rated`      | 5                       |
+
+Regras:
+
+- Textos em pt-BR; título e sinopse vazios caem para en-US. Sinopse que continuar vazia fica nula.
+- Classificação indicativa e "onde assistir" só do Brasil; se não houver, ficam vazios.
+- Trailer: YouTube, oficial, preferindo pt e depois en.
+- Conteúdo adulto é ignorado.
+- A importação é idempotente: rodar de novo atualiza os títulos, não duplica.
+- Limite de 20 requisições/s à TMDB, com novas tentativas em 429/5xx.
+
+### Atribuição
+
+A TMDB exige o logo dela e o aviso *"This product uses the TMDB API but is not endorsed or
+certified by TMDB."* numa seção Sobre/Créditos do app. Os dados de "onde assistir" vêm da
+JustWatch, que também precisa ser creditada. As duas coisas entram na tela Sobre (fase 4).

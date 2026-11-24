@@ -17,6 +17,10 @@ spring:
       ddl-auto: validate
   flyway:
     locations: classpath:db/migration
+  http:
+    clients:
+      connect-timeout: 5s
+      read-timeout: 20s
 
 server:
   port: ${BACKEND_PORT:8081}
@@ -26,3 +30,27 @@ management:
     web:
       exposure:
         include: health,info
+
+# ---------------------------------------------------------------------------
+# TMDB e importação
+# ---------------------------------------------------------------------------
+wannawatch:
+  tmdb:
+    base-url: https://api.themoviedb.org/3
+    api-token: ${TMDB_API_TOKEN:}
+    language: pt-BR
+    region: BR            # classificação indicativa e "onde assistir"
+    requests-per-second: 20
+    max-concurrency: 6
+    max-retries: 3
+  import:
+    on-startup-if-empty: true
+    cron: "0 0 4 * * *"   # todo dia às 4h; "-" desliga
+    zone: America/Sao_Paulo
+    admin-token: ${ADMIN_TOKEN:}
+    lists:
+      - { key: trending_day,   path: /trending/all/day, pages: 2 }
+      - { key: popular_movie,  path: /movie/popular,    media-type: MOVIE,  pages: 5 }
+      - { key: popular_series, path: /tv/popular,       media-type: SERIES, pages: 5 }
+      - { key: top_movie,      path: /movie/top_rated,  media-type: MOVIE,  pages: 5 }
+      - { key: top_series,     path: /tv/top_rated,     media-type: SERIES, pages: 5 }

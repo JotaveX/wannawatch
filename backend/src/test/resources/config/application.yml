@@ -1,0 +1,10 @@
+# Sobrescreve a configuração nos testes: nunca usar o token real nem disparar importação sozinha.
+wannawatch:
+  tmdb:
+    api-token: test-token
+    requests-per-second: 1000
+    max-retries: 2
+  import:
+    on-startup-if-empty: false
+    cron: "-"
+    admin-token: test-admin
