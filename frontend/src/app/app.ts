@@ -28,6 +28,15 @@ export class App {
 
   protected readonly feed = computed(() => this.meta().shell === 'feed');
 
+  /**
+   * Com <base href="/">, "#conteudo" apontaria para "/#conteudo" (recarregaria a Home),
+   * então o link só move o foco para o <main>.
+   */
+  protected skipToContent(event: Event): void {
+    event.preventDefault();
+    this.document.getElementById('conteudo')?.focus();
+  }
+
   constructor() {
     // O tema vai no <html> para o fundo da página inteira acompanhar.
     effect(() => {

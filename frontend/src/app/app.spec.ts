@@ -37,6 +37,8 @@ describe('App (shell)', () => {
 
   it('tem link para pular direto ao conteúdo', async () => {
     const el = await render('/');
-    expect(el.querySelector('a.skip-link')?.getAttribute('href')).toBe('#conteudo');
+    const skip = el.querySelector<HTMLAnchorElement>('a.skip-link')!;
+    skip.click();
+    expect(document.activeElement?.id).toBe('conteudo');
   });
 });
