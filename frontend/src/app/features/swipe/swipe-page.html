@@ -1,0 +1,130 @@
+<div class="layout">
+  <div class="center">
+    <header>
+      <a routerLink="/" class="brand" aria-label="wannawatch? — início"><ww-logo [size]="24" /></a>
+      <ww-segmented label="Modo" [options]="modes" [(value)]="social.mode" />
+    </header>
+
+    <p class="status" role="status">
+      @if (status().dot; as dot) {
+        <span class="dot" [class]="'dot ' + dot" aria-hidden="true"></span>
+      }
+      {{ status().text }}
+    </p>
+    <p class="visually-hidden">
+      Atalhos: seta para a direita quero ver, esquerda passa, para cima talvez, para baixo já assisti, Z volta o último.
+    </p>
+
+    <div class="deck">
+      @switch (store.status()) {
+        @case ('loading') {
+          <div class="placeholder" aria-busy="true" aria-label="Carregando títulos"></div>
+        }
+        @case ('error') {
+          <div class="placeholder message" role="alert">
+            <h1>Não deu pra carregar os títulos</h1>
+            <p>Confira se o back-end está rodando.</p>
+            <button wwButton variant="primary" (click)="store.retry()">Tentar de novo</button>
+          </div>
+        }
+        @default {
+          @if (store.finished()) {
+            <div class="placeholder message">
+              <h1>Você viu tudo!</h1>
+              <p>Já passou por todos os títulos do catálogo.</p>
+              <button wwButton variant="primary" (click)="store.reshuffle()">Embaralhar de novo</button>
+            </div>
+          }
+          @for (card of stack(); track card.id) {
+            <ww-swipe-card
+              [card]="card"
+              [interactive]="$last"
+              (decided)="store.decide($event)"
+            />
+          }
+        }
+      }
+
+      @if (store.match(); as match) {
+        <div class="match" role="status">
+          <strong>Deu match na {{ social.group.name }}!</strong>
+          <span>Todo mundo quer ver {{ match.title }}.</span>
+          <div>
+            <a wwButton variant="primary" size="sm" [routerLink]="titleLink(match)">Ver detalhes</a>
+            <button wwButton variant="soft" size="sm" (click)="store.match.set(null)">Continuar</button>
+          </div>
+        </div>
+      }
+    </div>
+
+    <div class="actions" role="group" aria-label="Escolha">
+      <button wwIconButton label="Voltar o último" (click)="undo()" [disabled]="!store.history().length">
+        <ww-icon name="undo" [size]="18" [stroke]="2.2" />
+      </button>
+      <button wwIconButton label="Passar" size="lg" (click)="act('pass')" [disabled]="!store.current()">
+        <ww-icon name="x" [size]="24" [stroke]="2.2" />
+      </button>
+      <button wwIconButton label="Talvez" size="md" class="maybe" (click)="act('maybe')" [disabled]="!store.current()">?</button>
+      <button wwIconButton label="Quero ver" size="lg" variant="pink" (click)="act('like')" [disabled]="!store.current()">
+        <ww-icon name="heart-filled" [size]="26" />
+      </button>
+      <button wwIconButton label="Já assisti" (click)="act('seen')" [disabled]="!store.current()">
+        <ww-icon name="eye" [size]="18" [stroke]="2.2" />
+      </button>
+    </div>
+  </div>
+
+  <!-- painel da direita (desktop) -->
+  <aside class="panel" aria-label="Sobre o título e a sessão">
+    @if (store.current(); as c) {
+      <section aria-labelledby="agora">
+        <h2 id="agora">Agora</h2>
+        <h3>{{ c.title }}</h3>
+        <p class="facts">{{ currentFacts().join(' · ') }}</p>
+        @if (c.genres.length) {
+          <ul class="genres">
+            @for (g of c.genres; track g.id) {
+              <li>{{ g.name }}</li>
+            }
+          </ul>
+        }
+        @if (c.overview) {
+          <p class="overview">{{ c.overview }}</p>
+        }
+        @if (social.isGroup()) {
+          <p class="friends">{{ social.friendsWhoWant(c.id) }} de {{ social.group.members }} da {{ social.group.name }} querem ver</p>
+        }
+        <a wwButton variant="outline" size="sm" [routerLink]="titleLink(c)">Mais informações</a>
+      </section>
+    }
+
+    <section aria-labelledby="sessao">
+      <h2 id="sessao">Nesta sessão</h2>
+      <dl class="counts">
+        <div><dt>Quero ver</dt><dd>{{ store.counts().like }}</dd></div>
+        <div><dt>Talvez</dt><dd>{{ store.counts().maybe }}</dd></div>
+        <div><dt>Passou</dt><dd>{{ store.counts().pass }}</dd></div>
+        <div><dt>Já viu</dt><dd>{{ store.counts().seen }}</dd></div>
+      </dl>
+      @if (store.liked().length) {
+        <ul class="liked">
+          @for (t of store.liked().slice(-5).reverse(); track t.id) {
+            <li><a [routerLink]="titleLink(t)">{{ t.title }}</a></li>
+          }
+        </ul>
+      }
+      <p class="note">As escolhas ainda não são salvas: somem ao sair da tela.</p>
+    </section>
+
+    <section aria-labelledby="atalhos">
+      <h2 id="atalhos">Atalhos</h2>
+      <dl class="keys">
+        <div><dt><kbd>→</kbd></dt><dd>Quero ver</dd></div>
+        <div><dt><kbd>←</kbd></dt><dd>Passar</dd></div>
+        <div><dt><kbd>↑</kbd></dt><dd>Talvez</dd></div>
+        <div><dt><kbd>↓</kbd></dt><dd>Já assisti</dd></div>
+        <div><dt><kbd>Z</kbd></dt><dd>Voltar o último</dd></div>
+      </dl>
+    </section>
+  </aside>
+</div>

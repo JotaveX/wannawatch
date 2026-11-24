@@ -19,8 +19,8 @@ export const routes: Routes = [
   {
     path: 'swipe',
     title: 'Swipe · wannawatch?',
-    loadComponent: placeholder,
-    data: { ...feed(), heading: 'Swipe', message: 'Passa, talvez ou quero ver: chega na fase 7.', icon: 'swipe' },
+    loadComponent: () => import('./features/swipe/swipe-page').then((m) => m.SwipePage),
+    data: feed(),
   },
   {
     path: 'reels',
