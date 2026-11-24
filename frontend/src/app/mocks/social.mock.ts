@@ -12,6 +12,14 @@ import { TitleCard } from '../core/api/models';
 
 export type ViewMode = 'group' | 'solo';
 
+export interface Friend {
+  name: string;
+  initials: string;
+  /** cor da esfera (paleta) e do texto por cima, com contraste */
+  bg: string;
+  fg: string;
+}
+
 export interface ContinueWatching {
   title: TitleCard;
   /** 0–100 */
@@ -25,6 +33,13 @@ export class SocialMock {
   readonly user = { initials: 'JV' } as const;
   readonly group = { name: 'Sexta do cinema', members: 4 } as const;
 
+  /** Amigos do grupo (o grupo tem 4 pessoas: você + 3). Sem foto ainda: a esfera mostra as iniciais. */
+  readonly friends: readonly Friend[] = [
+    { name: 'Bia Rocha', initials: 'BR', bg: '#5E5CE6', fg: '#FFFFFF' },
+    { name: 'Caio Lima', initials: 'CL', bg: '#FFC300', fg: '#141416' },
+    { name: 'Duda Alves', initials: 'DA', bg: '#FF2D55', fg: '#141416' },
+  ];
+
   /** Seletor Grupo | Solo — compartilhado entre as telas. */
   readonly mode = signal<ViewMode>('group');
   readonly isGroup = computed(() => this.mode() === 'group');
@@ -37,6 +52,22 @@ export class SocialMock {
   /** Quantos amigos do grupo querem ver (1..membros). */
   friendsWhoWant(titleId: number): number {
     return 1 + (hash(titleId, 2) % this.group.members);
+  }
+
+  /** Quais amigos também curtiram o título (0 a 3, fixo por título). */
+  friendsWhoLiked(titleId: number): Friend[] {
+    const count = hash(titleId, 8) % (this.friends.length + 1);
+    const start = hash(titleId, 9) % this.friends.length;
+    return Array.from({ length: count }, (_, i) => this.friends[(start + i) % this.friends.length]);
+  }
+
+  /** "Bia também curtiu" · "Bia e Caio também curtiram" · "Bia e mais 2 também curtiram" */
+  likedByLabel(friends: readonly Friend[]): string | null {
+    const first = (f: Friend) => f.name.split(' ')[0];
+    if (friends.length === 0) return null;
+    if (friends.length === 1) return `${first(friends[0])} também curtiu`;
+    if (friends.length === 2) return `${first(friends[0])} e ${first(friends[1])} também curtiram`;
+    return `${first(friends[0])} e mais ${friends.length - 1} também curtiram`;
   }
 
   /** Contador do "quero ver" do Reels, ex.: "12,4 mil". */

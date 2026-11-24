@@ -53,3 +53,27 @@ describe('SocialMock', () => {
     expect(social.isGroup()).toBe(false);
   });
 });
+
+describe('SocialMock (amigos que curtiram)', () => {
+  let social: SocialMock;
+  beforeEach(() => (social = TestBed.inject(SocialMock)));
+
+  it('escolhe de 0 a 3 amigos, sem repetir, sempre os mesmos para o título', () => {
+    const sizes = new Set<number>();
+    for (let id = 1; id < 300; id++) {
+      const friends = social.friendsWhoLiked(id);
+      sizes.add(friends.length);
+      expect(new Set(friends.map((f) => f.name)).size).toBe(friends.length);
+      expect(social.friendsWhoLiked(id)).toEqual(friends);
+    }
+    expect([...sizes].sort()).toEqual([0, 1, 2, 3]);
+  });
+
+  it('escreve quem curtiu em português', () => {
+    const [bia, caio, duda] = social.friends;
+    expect(social.likedByLabel([])).toBeNull();
+    expect(social.likedByLabel([bia])).toBe('Bia também curtiu');
+    expect(social.likedByLabel([bia, caio])).toBe('Bia e Caio também curtiram');
+    expect(social.likedByLabel([bia, caio, duda])).toBe('Bia e mais 2 também curtiram');
+  });
+});
