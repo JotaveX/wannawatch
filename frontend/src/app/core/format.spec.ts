@@ -1,5 +1,5 @@
 import { TitleCard } from './api/models';
-import { duration, metaLine, seasons } from './format';
+import { countryName, duration, languageName, longDate, metaLine, money, seasons } from './format';
 
 describe('format', () => {
   it('formata duração', () => {
@@ -23,5 +23,26 @@ describe('format', () => {
       metaLine({ ...base, mediaType: 'MOVIE', runtimeMinutes: 130, genres: [{ id: 1, name: 'Drama', slug: 'drama' }] }),
     ).toBe('Filme · Drama · 2h10');
     expect(metaLine({ ...base, mediaType: 'SERIES', seasonsCount: 2 })).toBe('Série · 2 temporadas');
+  });
+});
+
+describe('format (detalhes)', () => {
+  it('traduz país e idioma', () => {
+    expect(countryName('GB', 'United Kingdom')).toBe('Reino Unido');
+    expect(countryName('US')).toBe('Estados Unidos');
+    expect(languageName('en')).toBe('Inglês');
+    expect(languageName(null)).toBeNull();
+  });
+
+  it('formata dinheiro em dólar compacto e esconde zero', () => {
+    expect(money(165_000_000)).toMatch(/^US\$\s?165\smi$/);
+    expect(money(746_606_706)).toMatch(/^US\$\s?746,6\smi$/);
+    expect(money(0)).toBeNull();
+    expect(money(null)).toBeNull();
+  });
+
+  it('escreve a data por extenso sem erro de fuso', () => {
+    expect(longDate('2014-11-04')).toBe('4 de novembro de 2014');
+    expect(longDate(null)).toBeNull();
   });
 });

@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, ElementRef, input, signal, viewChild } from '@angular/core';
-import { Icon } from '../../shared/ui/icon';
+import { Icon } from './icon';
 
 /**
  * Fileira com rolagem horizontal (touch e trackpad nativos, com scroll-snap).

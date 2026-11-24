@@ -1,15 +1,7 @@
 import { HomeResponse, RowKind, TitleCard } from '../../core/api/models';
 import { metaLine } from '../../core/format';
 import { SocialMock } from '../../mocks/social.mock';
-
-/** Item já pronto para o card: o título + o que aparece embaixo + selo/progresso opcionais. */
-export interface RowItem {
-  card: TitleCard;
-  sub: string;
-  badge?: string;
-  /** 0–100, barra do "continue assistindo" */
-  progress?: number;
-}
+import { RowItem } from '../../shared/ui/wide-card';
 
 export type RowView =
   | { key: string; kind: 'TOP10'; title: string; items: TitleCard[] }

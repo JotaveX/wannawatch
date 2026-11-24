@@ -1,0 +1,170 @@
+@switch (state().status) {
+  @case ('ok') {
+    @let d = detail()!;
+    <section class="hero" aria-labelledby="titulo">
+      <ww-poster class="bg" ratio="fill" [image]="d.backdrop" [widths]="[780, 1280]" sizes="100vw"
+                 [seed]="d.id" [showTitle]="false" [eager]="true" />
+      <div class="shade" aria-hidden="true"></div>
+      <ww-top-nav />
+
+      <div class="hero-content">
+        <ww-poster class="cover" [image]="d.poster" [widths]="[342, 780]" sizes="240px"
+                   [seed]="d.id" [title]="d.title" [eager]="true" />
+        <div class="headline">
+          <p class="kind"><ww-app-mark [size]="22" />{{ type() }}</p>
+          <h1 id="titulo">
+            <span class="title" [class.long]="d.title.length > 18">{{ d.title }}</span>
+            @if (d.tagline) {
+              <span class="tagline">{{ d.tagline }}</span>
+            }
+          </h1>
+          <ul class="meta" aria-label="Informações">
+            <li class="match">{{ social.matchPercent(d.id) }}% match</li>
+            @for (part of meta(); track part) {
+              <li class="sep">{{ part }}</li>
+            }
+            @if (d.ageRating) {
+              <li class="rating" [attr.aria-label]="'Classificação ' + d.ageRating">{{ d.ageRating }}</li>
+            }
+          </ul>
+          <div class="actions">
+            @if (d.trailerUrl) {
+              <a wwButton variant="light" size="lg" [href]="d.trailerUrl" target="_blank" rel="noopener">
+                <ww-icon name="play" [size]="16" />Assistir trailer<span class="visually-hidden"> (abre o YouTube)</span>
+              </a>
+            }
+            <a wwButton variant="glass" size="lg" [routerLink]="[]" fragment="onde-assistir">
+              <ww-icon name="tv" [size]="18" />Onde assistir
+            </a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <div class="body">
+      <div class="main">
+        <section aria-labelledby="sinopse">
+          <h2 id="sinopse">Sinopse</h2>
+          <p class="overview">{{ d.overview ?? 'Ainda não tem sinopse em português.' }}</p>
+        </section>
+
+        @if (d.cast.length) {
+          <section aria-labelledby="elenco">
+            <h2 id="elenco">Elenco</h2>
+            <ul class="cast">
+              @for (person of d.cast; track person.personId) {
+                <li>
+                  @if (person.photoUrl) {
+                    <img [src]="person.photoUrl" alt="" loading="lazy" width="96" height="96" />
+                  } @else {
+                    <span class="no-photo" aria-hidden="true">{{ initials(person) }}</span>
+                  }
+                  <strong>{{ person.name }}</strong>
+                  @if (person.character) {
+                    <span>{{ person.character }}</span>
+                  }
+                </li>
+              }
+            </ul>
+          </section>
+        }
+
+        @if (crew().length) {
+          <section aria-labelledby="equipe">
+            <h2 id="equipe">Equipe</h2>
+            <dl class="facts">
+              @for (group of crew(); track group.job) {
+                <div>
+                  <dt>{{ group.job }}</dt>
+                  <dd>{{ group.names.join(', ') }}</dd>
+                </div>
+              }
+            </dl>
+          </section>
+        }
+      </div>
+
+      <aside>
+        <section id="onde-assistir" aria-labelledby="onde-assistir-titulo" class="card">
+          <h2 id="onde-assistir-titulo">Onde assistir</h2>
+          @for (group of providers(); track group.label) {
+            <div class="providers">
+              <h3>{{ group.label }}</h3>
+              <ul>
+                @for (p of group.providers; track p.name) {
+                  <li>
+                    @if (p.logoUrl) {
+                      <img [src]="p.logoUrl" alt="" loading="lazy" width="44" height="44" />
+                    }
+                    <span>{{ p.name }}</span>
+                  </li>
+                }
+              </ul>
+            </div>
+          } @empty {
+            <p class="muted">Por enquanto não está em nenhum serviço no Brasil.</p>
+          }
+          @if (d.watchProviders.link && providers().length) {
+            <a class="more" [href]="d.watchProviders.link" target="_blank" rel="noopener">
+              Ver links para assistir<ww-icon name="external" [size]="14" /><span class="visually-hidden"> (abre a TMDB)</span>
+            </a>
+          }
+          <p class="credit">
+            Dados de onde assistir:
+            <a href="https://www.justwatch.com" target="_blank" rel="noopener">JustWatch</a>
+          </p>
+        </section>
+
+        @if (info().length) {
+          <section aria-labelledby="ficha" class="card">
+            <h2 id="ficha">Ficha técnica</h2>
+            <dl class="facts">
+              @for (row of info(); track row.label) {
+                <div>
+                  <dt>{{ row.label }}</dt>
+                  <dd>{{ row.value }}</dd>
+                </div>
+              }
+            </dl>
+          </section>
+        }
+      </aside>
+    </div>
+
+    @if (similar().length) {
+      <ww-title-row class="similar" heading="Parecidos">
+        @for (item of similar(); track item.card.id) {
+          <ww-wide-card [item]="item" />
+        }
+      </ww-title-row>
+    }
+  }
+  @case ('notfound') {
+    <ww-top-nav [overImage]="false" />
+    <div class="message">
+      <h1>Não achamos esse título</h1>
+      <p>Pode ter saído do catálogo ou o link está errado.</p>
+      <a wwButton variant="light" routerLink="/">Voltar para o início</a>
+    </div>
+  }
+  @case ('error') {
+    <ww-top-nav [overImage]="false" />
+    <div class="message" role="alert">
+      <h1>Não deu pra carregar os detalhes</h1>
+      <p>Confira se o back-end está rodando e tente de novo.</p>
+      <button wwButton variant="light" (click)="retry.update((n) => n + 1)">Tentar de novo</button>
+    </div>
+  }
+  @default {
+    <ww-top-nav [overImage]="false" />
+    <div class="skeleton" aria-busy="true" aria-label="Carregando">
+      <span class="sk-cover"></span>
+      <div>
+        <span class="sk-line w60"></span>
+        <span class="sk-line w40"></span>
+        <span class="sk-line"></span>
+        <span class="sk-line"></span>
+      </div>
+    </div>
+  }
+}

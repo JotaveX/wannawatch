@@ -7,9 +7,9 @@ import { SocialMock } from '../../mocks/social.mock';
 import { Button } from '../../shared/ui/button';
 import { buildHomeRows } from './home-rows';
 import { HomeHero } from './home-hero';
-import { TitleRow } from './title-row';
+import { TitleRow } from '../../shared/ui/title-row';
 import { TopCard } from './top-card';
-import { WideCard } from './wide-card';
+import { WideCard } from '../../shared/ui/wide-card';
 
 type State = { status: 'loading' } | { status: 'error' } | { status: 'ok'; data: HomeResponse };
 
@@ -23,7 +23,7 @@ type State = { status: 'loading' } | { status: 'error' } | { status: 'ok'; data:
         @if (hero(); as hero) {
           <ww-home-hero [hero]="hero"><ww-top-nav /></ww-home-hero>
         } @else {
-          <ww-top-nav />
+          <ww-top-nav [overImage]="false" />
         }
         <div class="rows" [class.under-hero]="!!hero()">
           @for (row of rows(); track row.key) {
@@ -44,7 +44,7 @@ type State = { status: 'loading' } | { status: 'error' } | { status: 'ok'; data:
         </div>
       }
       @case ('error') {
-        <ww-top-nav />
+        <ww-top-nav [overImage]="false" />
         <div class="message" role="alert">
           <h1>Não deu pra carregar a Home</h1>
           <p>Confira se o back-end está rodando e tente de novo.</p>
@@ -52,7 +52,7 @@ type State = { status: 'loading' } | { status: 'error' } | { status: 'ok'; data:
         </div>
       }
       @default {
-        <ww-top-nav />
+        <ww-top-nav [overImage]="false" />
         <div class="skeleton" aria-busy="true" aria-label="Carregando">
           <div class="sk-hero"></div>
           @for (n of [1, 2, 3]; track n) {

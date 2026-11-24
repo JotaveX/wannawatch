@@ -31,14 +31,14 @@ export const routes: Routes = [
   {
     path: 'filme/:id',
     title: 'Filme · wannawatch?',
-    loadComponent: placeholder,
-    data: { ...cinema, heading: 'Detalhes do filme', message: 'A página de detalhes chega na fase 6.', icon: 'film' },
+    loadComponent: () => import('./features/details/details-page').then((m) => m.DetailsPage),
+    data: { ...cinema, mediaType: 'MOVIE' },
   },
   {
     path: 'serie/:id',
     title: 'Série · wannawatch?',
-    loadComponent: placeholder,
-    data: { ...cinema, heading: 'Detalhes da série', message: 'A página de detalhes chega na fase 6.', icon: 'tv' },
+    loadComponent: () => import('./features/details/details-page').then((m) => m.DetailsPage),
+    data: { ...cinema, mediaType: 'SERIES' },
   },
   {
     path: 'busca',
@@ -51,7 +51,7 @@ export const routes: Routes = [
   {
     path: 'series',
     title: 'Séries · wannawatch?',
-    loadComponent: placeholder,
+    loadComponent: () => import('./features/search/search-page').then((m) => m.SearchPage),
     data: { ...feed(), heading: 'Séries', message: 'Uma vitrine só de séries vem depois.', icon: 'tv' },
   },
   {

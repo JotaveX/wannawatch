@@ -1,8 +1,17 @@
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { TitleCard } from '../../core/api/models';
 import { titleLink } from '../../core/title-link';
-import { Poster } from '../../shared/ui/poster';
-import { RowItem } from './home-rows';
+import { Poster } from './poster';
+
+/** Item já pronto para o card: o título + o que aparece embaixo + selo/progresso opcionais. */
+export interface RowItem {
+  card: TitleCard;
+  sub: string;
+  badge?: string;
+  /** 0–100, barra do "continue assistindo" */
+  progress?: number;
+}
 
 /** Card horizontal (backdrop 16:9) com nome e linha de informação embaixo. */
 @Component({

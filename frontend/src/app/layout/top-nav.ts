@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, input } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { SocialMock } from '../mocks/social.mock';
 import { Icon } from '../shared/ui/icon';
@@ -13,6 +13,7 @@ import { Logo } from '../shared/ui/logo';
   selector: 'ww-top-nav',
   imports: [RouterLink, RouterLinkActive, Icon, Logo],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { '[class.solid]': '!overImage()' },
   template: `
     <header>
       <a routerLink="/" class="brand" aria-label="wannawatch? — início"><ww-logo [size]="26" /></a>
@@ -131,6 +132,11 @@ import { Logo } from '../shared/ui/logo';
       font-size: 14px;
       text-decoration: none;
     }
+    /* sem imagem atrás, o vidro escuro sumiria no fundo escuro */
+    :host(.solid) nav,
+    :host(.solid) .mode {
+      background: var(--ww-surface-dark);
+    }
     @media (min-width: 1024px) {
       nav .link {
         display: inline-flex;
@@ -163,6 +169,8 @@ import { Logo } from '../shared/ui/logo';
   `,
 })
 export class TopNav {
+  /** false quando não há imagem atrás (busca, erros): a pílula ganha fundo sólido */
+  readonly overImage = input(true);
   protected readonly social = inject(SocialMock);
   protected readonly links = [
     { label: 'Início', path: '/' },
