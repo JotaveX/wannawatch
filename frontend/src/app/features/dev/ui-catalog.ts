@@ -44,7 +44,7 @@ import { Segmented, SegmentOption } from '../../shared/ui/segmented';
 
         <div class="row">
           <ww-segmented label="Modo" [options]="modes" [(value)]="mode" />
-          <ww-segmented label="Feed" variant="pill" [options]="tabs" [(value)]="tab" />
+          <ww-segmented label="Tipo" variant="pill" [options]="tabs" [(value)]="tab" />
         </div>
 
         <div class="posters">
@@ -104,10 +104,10 @@ export class UiCatalog {
     { value: 'group', label: 'Grupo' },
     { value: 'solo', label: 'Solo' },
   ];
-  protected readonly tabs: SegmentOption<'foryou' | 'group'>[] = [
-    { value: 'foryou', label: 'Pra você' },
-    { value: 'group', label: 'Do grupo' },
+  protected readonly tabs: SegmentOption<'movie' | 'series'>[] = [
+    { value: 'movie', label: 'Filmes' },
+    { value: 'series', label: 'Séries' },
   ];
   protected readonly mode = this.social.mode;
-  protected readonly tab = signal<'foryou' | 'group'>('foryou');
+  protected readonly tab = signal<'movie' | 'series'>('movie');
 }

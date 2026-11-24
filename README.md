@@ -1,6 +1,15 @@
 # wannawatch?
 
-Recomendação de filmes e séries — sozinho ou em grupo. Monorepo com:
+Recomendação de filmes e séries — sozinho ou em grupo. Três jeitos de descobrir o que assistir:
+
+- **Início**: vitrine no estilo Netflix, com destaque, Top 10 e fileiras por tema.
+- **Swipe**: cartas no estilo Tinder — passa, talvez, quero ver ou já assisti.
+- **Reels**: feed vertical de sinopses no estilo TikTok.
+
+Além disso: página de detalhes (elenco, equipe, onde assistir no Brasil, ficha técnica) e busca por
+título, elenco e gênero.
+
+Monorepo com:
 
 - `frontend/` — Angular 21 (standalone, signals, zoneless, Vitest)
 - `backend/` — Java 21 + Spring Boot 4 (Maven, JPA, Flyway)
@@ -140,5 +149,66 @@ Regras:
 ### Atribuição
 
 A TMDB exige o logo dela e o aviso *"This product uses the TMDB API but is not endorsed or
-certified by TMDB."* numa seção Sobre/Créditos do app. Os dados de "onde assistir" vêm da
-JustWatch, que também precisa ser creditada. As duas coisas entram na tela Sobre (fase 4).
+certified by TMDB."* numa seção Sobre/Créditos do app: está em `/sobre`, com link na barra
+lateral. Os dados de "onde assistir" vêm da JustWatch, creditada em `/sobre` e no próprio bloco
+"Onde assistir" da página de detalhes.
+
+## Telas
+
+| Rota | Tela | Tema |
+|---|---|---|
+| `/` | Início | escuro |
+| `/filme/:id`, `/serie/:id` | Detalhes | escuro |
+| `/busca?q=` | Busca | escuro |
+| `/swipe` | Swipe | claro |
+| `/reels` | Reels | escuro |
+| `/sobre` | Sobre e créditos | claro |
+| `/series`, `/filmes`, `/minha-lista`, `/grupos`, `/perfil` | Provisórias ("em breve") | claro |
+| `/dev/componentes` | Vitrine de componentes (só em dev) | claro e escuro |
+
+No celular a navegação fica numa barra de abas embaixo. No desktop (a partir de 1024px), Swipe,
+Reels e as telas secundárias ganham uma barra lateral no estilo TikTok web; Início, Detalhes e
+Busca usam o menu em pílula no topo.
+
+Atalhos de teclado:
+
+- **Swipe**: `→` quero ver, `←` passa, `↑` talvez, `↓` já assisti, `Z` volta o último.
+- **Reels**: `↓`/`J` próximo, `↑`/`K` anterior, `L` quero ver, `S` salvar.
+
+## O que é de mentira (mock)
+
+Ainda não existem usuários, login, grupos nem recomendação personalizada. Tudo que é social
+sai de um lugar só, `frontend/src/app/mocks/social.mock.ts`, e é derivado do id do título
+(sempre igual para o mesmo título):
+
+- o "% match";
+- o grupo "Sexta do cinema" (você + 3 amigos), o seletor Grupo/Solo e o avatar "JV";
+- quantos amigos querem ver, o "Deu match!" do Swipe e as esferas de quem curtiu no Reels
+  (os amigos não têm foto: as esferas mostram as iniciais);
+- as fileiras "Continue assistindo" e "Deu match na Sexta do cinema" da Home (com títulos reais);
+- o contador de "quero ver" do Reels.
+
+As escolhas do Swipe e o "quero ver"/"salvar" do Reels ficam só na memória da tela e somem ao
+sair dela. Quando houver back-end para isso, basta trocar a implementação do `SocialMock` (e
+ligar as ações a ele); as telas não mudam.
+
+## Acessibilidade
+
+- Elementos reais de botão e link, com nome acessível em todo botão só de ícone.
+- Foco sempre visível e link "Pular para o conteúdo".
+- Contraste de texto ≥ 4,5:1. Sobre imagens, uma camada chapada escura (60%) garante isso para
+  qualquer imagem, sem degradê.
+- Alvos de toque de pelo menos 44px.
+- Swipe e Reels funcionam por botões e teclado, sem depender de arrastar.
+- Animações respeitam "reduzir movimento" do sistema.
+- Verificado com axe-core (WCAG 2.1 A/AA) em todas as telas, no desktop e no celular, sem violações.
+
+## Decisões principais
+
+- O front nunca fala com a TMDB: o back importa o catálogo para o Postgres e serve a API própria.
+  O token fica só no `.env` do back.
+- Uma tabela `title` para filme e série; dados só de exibição (produtoras, países, onde assistir)
+  numa coluna JSONB.
+- Busca fuzzy no próprio Postgres (`pg_trgm` + `unaccent`), sem serviço extra.
+- Swipe em ordem aleatória mas estável (hash do id com uma seed); Reels e Swipe paginam por cursor.
+- Front sem biblioteca de UI: componentes próprios sobre design tokens em CSS.
