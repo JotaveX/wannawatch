@@ -1,0 +1,96 @@
+<ww-top-nav [overImage]="false" />
+
+<div class="page">
+  <form role="search" (submit)="$event.preventDefault()">
+    <label for="busca">Buscar títulos, elenco e gêneros</label>
+    <div class="field">
+      <ww-icon name="search" [size]="22" />
+      <input
+        #field
+        id="busca"
+        type="search"
+        autocomplete="off"
+        enterkeyhint="search"
+        placeholder="Título, pessoa ou gênero"
+        [value]="term()"
+        (input)="onInput(field.value)"
+      />
+      @if (term()) {
+        <button type="button" class="clear" aria-label="Limpar busca" (click)="clear()">
+          <ww-icon name="x" [size]="18" />
+        </button>
+      }
+    </div>
+  </form>
+
+  <p class="status" aria-live="polite">
+    @switch (state().status) {
+      @case ('loading') { Buscando… }
+      @case ('ok') {
+        @let s = result()!;
+        @if (s.totalItems === 1) { 1 resultado para “{{ s.term }}” }
+        @else if (s.totalItems > 1) { {{ s.totalItems }} resultados para “{{ s.term }}” }
+      }
+    }
+  </p>
+
+  @switch (state().status) {
+    @case ('ok') {
+      @let s = result()!;
+      @if (s.items.length) {
+        <ul class="results">
+          @for (hit of s.items; track hit.id) {
+            <li>
+              <a [routerLink]="titleLink(hit)">
+                <ww-poster class="cover" [image]="hit.poster" [widths]="[342, 780]" sizes="96px"
+                           [seed]="hit.id" [title]="hit.title" />
+                <span class="text">
+                  <strong>{{ hit.title }}</strong>
+                  <span class="meta">{{ metaLine(hit) }}@if (hit.year) { · {{ hit.year }} }</span>
+                  @if (matchLabel(hit); as why) {
+                    <span class="why">{{ why }}</span>
+                  }
+                </span>
+              </a>
+            </li>
+          }
+        </ul>
+        @if (s.page < s.totalPages - 1) {
+          <button wwButton variant="soft" class="more" [disabled]="loadingMore()" (click)="loadMore()">
+            {{ loadingMore() ? 'Carregando…' : 'Mostrar mais' }}
+          </button>
+        }
+      } @else {
+        <div class="empty">
+          <h1>Nada encontrado para “{{ s.term }}”</h1>
+          <p>Tente outro nome, o título original ou o nome de alguém do elenco.</p>
+        </div>
+      }
+    }
+    @case ('error') {
+      <div class="empty" role="alert">
+        <h1>Não deu pra buscar agora</h1>
+        <p>Confira se o back-end está rodando.</p>
+        <button wwButton variant="light" (click)="retry()">Tentar de novo</button>
+      </div>
+    }
+    @case ('loading') {
+      <ul class="results" aria-hidden="true">
+        @for (n of [1, 2, 3, 4]; track n) {
+          <li class="sk"><span class="sk-cover"></span><span class="sk-text"></span></li>
+        }
+      </ul>
+    }
+    @default {
+      <section class="hint" aria-labelledby="generos">
+        <h1 class="visually-hidden">Busca</h1>
+        <h2 id="generos">Explorar por gênero</h2>
+        <ul class="chips">
+          @for (g of genres(); track g.id) {
+            <li><button type="button" (click)="pick(g.name)">{{ g.name }}</button></li>
+          }
+        </ul>
+      </section>
+    }
+  }
+</div>

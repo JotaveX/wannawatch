@@ -43,8 +43,8 @@ export const routes: Routes = [
   {
     path: 'busca',
     title: 'Busca · wannawatch?',
-    loadComponent: placeholder,
-    data: { ...cinema, heading: 'Busca', message: 'A busca chega na fase 6.', icon: 'search' },
+    loadComponent: () => import('./features/search/search-page').then((m) => m.SearchPage),
+    data: cinema,
   },
 
   // --- Fora do escopo desta etapa ---
