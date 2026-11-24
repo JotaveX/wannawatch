@@ -1,0 +1,22 @@
+name: wannawatch
+
+services:
+  db:
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_DB: ${DB_NAME:-wannawatch}
+      POSTGRES_USER: ${DB_USER:-wannawatch}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-wannawatch}
+    ports:
+      - "127.0.0.1:${DB_PORT:-5434}:5432"
+    volumes:
+      # A partir do Postgres 18 o volume é montado em /var/lib/postgresql
+      - wannawatch-db:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  wannawatch-db:

@@ -1,0 +1,28 @@
+spring:
+  application:
+    name: wannawatch
+  # Lê o .env da raiz do monorepo (o mesmo que o docker-compose usa).
+  # Funciona rodando de dentro de backend/ ou da raiz. Variáveis de ambiente reais têm prioridade.
+  config:
+    import:
+      - optional:file:../.env[.properties]
+      - optional:file:.env[.properties]
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5434}/${DB_NAME:wannawatch}
+    username: ${DB_USER:wannawatch}
+    password: ${DB_PASSWORD:wannawatch}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+  flyway:
+    locations: classpath:db/migration
+
+server:
+  port: ${BACKEND_PORT:8081}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info

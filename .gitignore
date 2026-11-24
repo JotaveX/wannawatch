@@ -1,0 +1,10 @@
+# Segredos e config local
+.env
+*.local.yml
+*.local.properties
+
+# Editores / SO
+.idea/
+.vscode/
+*.iml
+.DS_Store
