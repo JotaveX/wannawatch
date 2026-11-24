@@ -1,0 +1,72 @@
+{
+  "id": 101,
+  "adult": false,
+  "title": "Noite em Marte",
+  "original_title": "Night on Mars",
+  "tagline": "Ninguém fica sozinho",
+  "overview": "Uma astronauta presa em Marte descobre que não está sozinha.",
+  "original_language": "en",
+  "release_date": "2026-03-12",
+  "runtime": 130,
+  "status": "Released",
+  "poster_path": "/poster101.jpg",
+  "backdrop_path": "/backdrop101.jpg",
+  "vote_average": 7.8,
+  "vote_count": 1520,
+  "popularity": 250.5,
+  "budget": 0,
+  "revenue": 123000000,
+  "genres": [{ "id": 878, "name": "Ficção científica" }, { "id": 18, "name": "Drama" }],
+  "production_companies": [{ "id": 1, "name": "Estúdio Vermelho", "logo_path": "/estudio.png", "origin_country": "US" }],
+  "production_countries": [{ "iso_3166_1": "US", "name": "United States of America" }],
+  "release_dates": {
+    "results": [
+      { "iso_3166_1": "US", "release_dates": [{ "certification": "PG-13", "type": 3 }] },
+      { "iso_3166_1": "BR", "release_dates": [
+        { "certification": "", "type": 1 },
+        { "certification": "14", "type": 4 },
+        { "certification": "12", "type": 3 }
+      ] }
+    ]
+  },
+  "videos": {
+    "results": [
+      { "key": "PT_TEASER", "site": "YouTube", "type": "Teaser", "official": true, "iso_639_1": "pt", "published_at": "2026-01-01T00:00:00.000Z" },
+      { "key": "EN_TRAILER", "site": "YouTube", "type": "Trailer", "official": true, "iso_639_1": "en", "published_at": "2026-02-01T00:00:00.000Z" },
+      { "key": "PT_FAN", "site": "YouTube", "type": "Trailer", "official": false, "iso_639_1": "pt", "published_at": "2026-02-10T00:00:00.000Z" },
+      { "key": "PT_TRAILER", "site": "YouTube", "type": "Trailer", "official": true, "iso_639_1": "pt", "published_at": "2026-01-20T00:00:00.000Z" },
+      { "key": "VIMEO", "site": "Vimeo", "type": "Trailer", "official": true, "iso_639_1": "pt", "published_at": "2026-03-01T00:00:00.000Z" }
+    ]
+  },
+  "credits": {
+    "cast": [
+      { "id": 11, "name": "Bia Coadjuvante", "profile_path": "/bia.jpg", "character": "Engenheira", "order": 2, "known_for_department": "Acting" },
+      { "id": 10, "name": "Ana Protagonista", "profile_path": "/ana.jpg", "character": "Comandante Lia", "order": 0, "known_for_department": "Acting" },
+      { "id": 12, "name": "Caio Segundo", "profile_path": null, "character": "Piloto", "order": 1, "known_for_department": "Acting" }
+    ],
+    "crew": [
+      { "id": 20, "name": "Davi Diretor", "profile_path": "/davi.jpg", "job": "Director", "department": "Directing", "known_for_department": "Directing" },
+      { "id": 21, "name": "Eva Produtora", "profile_path": null, "job": "Producer", "department": "Production", "known_for_department": "Production" },
+      { "id": 22, "name": "Fabi Roteirista", "profile_path": null, "job": "Screenplay", "department": "Writing", "known_for_department": "Writing" },
+      { "id": 20, "name": "Davi Diretor", "profile_path": "/davi.jpg", "job": "Director", "department": "Directing", "known_for_department": "Directing" }
+    ]
+  },
+  "translations": {
+    "translations": [
+      { "iso_639_1": "en", "iso_3166_1": "US", "data": { "title": "Night on Mars", "overview": "An astronaut stranded on Mars.", "tagline": "No one is alone" } }
+    ]
+  },
+  "watch/providers": {
+    "results": {
+      "US": { "link": "https://www.themoviedb.org/movie/101/watch?locale=US", "flatrate": [{ "provider_name": "Hulu", "logo_path": "/hulu.png", "display_priority": 1 }] },
+      "BR": {
+        "link": "https://www.themoviedb.org/movie/101/watch?locale=BR",
+        "flatrate": [
+          { "provider_name": "Netflix", "logo_path": "/netflix.png", "display_priority": 2 },
+          { "provider_name": "Max", "logo_path": "/max.png", "display_priority": 1 }
+        ],
+        "rent": [{ "provider_name": "Apple TV", "logo_path": "/apple.png", "display_priority": 5 }]
+      }
+    }
+  }
+}

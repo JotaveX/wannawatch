@@ -1,0 +1,37 @@
+{
+  "id": 202,
+  "adult": false,
+  "name": "Os Vizinhos de Cima",
+  "original_name": "The Upstairs Neighbors",
+  "tagline": "",
+  "overview": "",
+  "original_language": "en",
+  "first_air_date": "2024-05-01",
+  "number_of_seasons": 2,
+  "number_of_episodes": 16,
+  "episode_run_time": [],
+  "status": "Returning Series",
+  "poster_path": "/poster202.jpg",
+  "backdrop_path": null,
+  "vote_average": 8.1,
+  "vote_count": 870,
+  "popularity": 180.25,
+  "genres": [{ "id": 18, "name": "Drama" }, { "id": 35, "name": "Comédia" }, { "id": 10765, "name": "Sci-Fi & Fantasy" }],
+  "production_companies": [],
+  "production_countries": [{ "iso_3166_1": "GB", "name": "United Kingdom" }],
+  "networks": [{ "id": 49, "name": "HBO", "logo_path": "/hbo.png", "origin_country": "US" }],
+  "created_by": [{ "id": 900, "name": "Gabi Criadora", "profile_path": "/gabi.jpg" }],
+  "content_ratings": { "results": [{ "iso_3166_1": "US", "rating": "TV-14" }] },
+  "videos": { "results": [] },
+  "credits": {
+    "cast": [{ "id": 10, "name": "Ana Protagonista", "profile_path": "/ana.jpg", "character": "Júlia", "order": 0, "known_for_department": "Acting" }],
+    "crew": [{ "id": 20, "name": "Davi Diretor", "profile_path": "/davi.jpg", "job": "Director", "department": "Directing", "known_for_department": "Directing" }]
+  },
+  "translations": {
+    "translations": [
+      { "iso_639_1": "en", "iso_3166_1": "GB", "data": { "name": "The Upstairs Neighbours", "overview": "Three friends (GB).", "tagline": "" } },
+      { "iso_639_1": "en", "iso_3166_1": "US", "data": { "name": "The Upstairs Neighbors", "overview": "Three friends share a tiny flat.", "tagline": "" } }
+    ]
+  },
+  "watch/providers": { "results": {} }
+}
