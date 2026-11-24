@@ -51,7 +51,8 @@
         @if (d.cast.length) {
           <section aria-labelledby="elenco">
             <h2 id="elenco">Elenco</h2>
-            <ul class="cast">
+            <!-- lista rolável: focável para quem usa teclado conseguir rolar -->
+            <ul class="cast" tabindex="0" aria-labelledby="elenco">
               @for (person of d.cast; track person.personId) {
                 <li>
                   @if (person.photoUrl) {

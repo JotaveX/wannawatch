@@ -10,6 +10,7 @@ import { SIDE_ITEMS } from './nav-items';
   selector: 'ww-side-nav',
   imports: [RouterLink, RouterLinkActive, Icon, Logo],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { role: 'complementary', 'aria-label': 'Menu do wannawatch?' },
   template: `
     <a routerLink="/" class="brand" aria-label="wannawatch? — início"><ww-logo [size]="26" /></a>
 
@@ -35,10 +36,10 @@ import { SIDE_ITEMS } from './nav-items';
       </div>
     </section>
 
-    <footer>
+    <div class="credits">
       <a routerLink="/sobre">Sobre e créditos</a>
       <span>Dados de filmes e séries: TMDB</span>
-    </footer>
+    </div>
   `,
   styles: `
     :host {
@@ -108,7 +109,7 @@ import { SIDE_ITEMS } from './nav-items';
       font-weight: 700;
       font-size: 13px;
     }
-    footer {
+    .credits {
       margin-top: auto;
       display: flex;
       flex-direction: column;
@@ -117,7 +118,7 @@ import { SIDE_ITEMS } from './nav-items';
       font-size: 12px;
       color: var(--text-2);
     }
-    footer a {
+    .credits a {
       color: var(--text-2);
     }
   `,

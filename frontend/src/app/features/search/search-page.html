@@ -1,6 +1,7 @@
 <ww-top-nav [overImage]="false" />
 
 <div class="page">
+  <h1 class="visually-hidden">Busca</h1>
   <form role="search" (submit)="$event.preventDefault()">
     <label for="busca">Buscar títulos, elenco e gêneros</label>
     <div class="field">
@@ -62,14 +63,14 @@
         }
       } @else {
         <div class="empty">
-          <h1>Nada encontrado para “{{ s.term }}”</h1>
+          <h2>Nada encontrado para “{{ s.term }}”</h2>
           <p>Tente outro nome, o título original ou o nome de alguém do elenco.</p>
         </div>
       }
     }
     @case ('error') {
       <div class="empty" role="alert">
-        <h1>Não deu pra buscar agora</h1>
+        <h2>Não deu pra buscar agora</h2>
         <p>Confira se o back-end está rodando.</p>
         <button wwButton variant="light" (click)="retry()">Tentar de novo</button>
       </div>
@@ -83,7 +84,6 @@
     }
     @default {
       <section class="hint" aria-labelledby="generos">
-        <h1 class="visually-hidden">Busca</h1>
         <h2 id="generos">Explorar por gênero</h2>
         <ul class="chips">
           @for (g of genres(); track g.id) {

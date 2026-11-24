@@ -79,7 +79,7 @@ header {
   background: var(--ww-white);
   text-align: center;
 }
-.message h1 {
+.message h2 {
   font-size: 26px;
 }
 .message p {

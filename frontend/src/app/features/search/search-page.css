@@ -140,7 +140,7 @@ input::-webkit-search-cancel-button {
   padding: var(--ww-space-8) 0;
   color: var(--ww-text-on-dark-2);
 }
-.empty h1 {
+.empty h2 {
   font-size: 24px;
   color: var(--ww-white);
 }
