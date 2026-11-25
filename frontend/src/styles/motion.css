@@ -20,6 +20,14 @@
  * imagem: num translateY fracionário ela é reamostrada e o texto fica borrado até a animação
  * acabar — e com o ease-out ela passa um bom tempo abaixo de 1px.
  */
+/*
+ * Entre a saída da velha e a entrada da nova não há foto nenhuma, e o que aparece é a tela
+ * padrão do navegador (branca). Pinta o fundo do tema da página nova ali: Home → Séries não
+ * pisca mais branco antes do escuro.
+ */
+::view-transition {
+  background: var(--bg, var(--ww-bg-light));
+}
 ::view-transition-old(root) {
   animation: ww-fade-out 120ms var(--ww-ease) both;
 }

@@ -67,7 +67,8 @@ const app: Routes = [
     path: 'series',
     title: 'Séries · wannawatch?',
     loadComponent: () => import('./features/search/search-page').then((m) => m.SearchPage),
-    data: { ...feed(), heading: 'Séries', message: 'Uma vitrine só de séries vem depois.', icon: 'tv' },
+    // a busca é sempre escura: com o tema claro o fundo atrás dela piscava branco na troca
+    data: { ...feed('dark'), heading: 'Séries', message: 'Uma vitrine só de séries vem depois.', icon: 'tv' },
   },
   {
     path: 'filmes',
