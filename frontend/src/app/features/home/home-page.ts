@@ -1,9 +1,10 @@
 import { ChangeDetectionStrategy, Component, computed, DestroyRef, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CatalogApi } from '../../core/api/catalog-api';
-import { HomeResponse } from '../../core/api/models';
+import { FriendsLiked, HomeResponse } from '../../core/api/models';
+import { SocialApi } from '../../core/api/social-api';
+import { LikesStore } from '../../core/social/likes-store';
 import { TopNav } from '../../layout/top-nav';
-import { SocialMock } from '../../mocks/social.mock';
 import { Button } from '../../shared/ui/button';
 import { buildHomeRows } from './home-rows';
 import { HomeHero } from './home-hero';
@@ -151,19 +152,21 @@ type State = { status: 'loading' } | { status: 'error' } | { status: 'ok'; data:
 })
 export class HomePage {
   private readonly api = inject(CatalogApi);
-  private readonly social = inject(SocialMock);
+  private readonly social = inject(SocialApi);
+  private readonly likes = inject(LikesStore);
   private readonly destroyRef = inject(DestroyRef);
 
   protected readonly state = signal<State>({ status: 'loading' });
+  /** fileira "Seus amigos curtiram"; se falhar, a Home segue sem ela */
+  private readonly friendsLiked = signal<FriendsLiked[]>([]);
   private readonly data = computed(() => {
     const s = this.state();
     return s.status === 'ok' ? s.data : null;
   });
   protected readonly hero = computed(() => this.data()?.hero ?? null);
-  // depende do modo grupo/solo (lido dentro de buildHomeRows), então troca na hora
   protected readonly rows = computed(() => {
     const data = this.data();
-    return data ? buildHomeRows(data, this.social) : [];
+    return data ? buildHomeRows(data, this.friendsLiked()) : [];
   });
 
   constructor() {
@@ -176,8 +179,21 @@ export class HomePage {
       .home()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: (data) => this.state.set({ status: 'ok', data }),
+        next: (data) => {
+          this.state.set({ status: 'ok', data });
+          if (data.hero) this.likes.ensure([data.hero.id]);
+        },
         error: () => this.state.set({ status: 'error' }),
+      });
+    this.social
+      .friendsLiked()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (items) => {
+          this.friendsLiked.set(items);
+          this.likes.remember(items.map((i) => ({ titleId: i.title.id, likedByMe: i.likedByMe, friends: i.friends })));
+        },
+        error: () => this.friendsLiked.set([]),
       });
   }
 }

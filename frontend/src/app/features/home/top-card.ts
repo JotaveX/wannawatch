@@ -47,10 +47,26 @@ import { Poster } from '../../shared/ui/poster';
       width: 124px;
       border-radius: var(--ww-radius-sm);
       font-size: 14px;
-      transition: transform var(--ww-fast) var(--ww-ease);
+      transition:
+        transform var(--ww-medium) var(--ww-ease-spring),
+        box-shadow var(--ww-medium) var(--ww-ease-out);
     }
-    a:hover .art {
-      transform: scale(1.03);
+    .rank {
+      transition: -webkit-text-stroke-color var(--ww-medium) var(--ww-ease-out), transform var(--ww-slow) var(--ww-ease-out);
+    }
+    @media (hover: hover) and (pointer: fine) {
+      a:hover .art {
+        transform: translateY(-4px) rotate(-1deg);
+        box-shadow: var(--ww-shadow-lift);
+      }
+      a:hover .rank {
+        -webkit-text-stroke-color: var(--ww-white);
+        transform: translateX(-4px);
+      }
+    }
+    a:active .art {
+      transform: scale(0.98);
+      transition-duration: var(--ww-fast);
     }
   `,
 })

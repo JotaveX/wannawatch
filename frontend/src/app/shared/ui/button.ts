@@ -34,10 +34,31 @@ export type ButtonVariant = 'primary' | 'light' | 'glass' | 'outline' | 'soft';
       text-decoration: none;
       white-space: nowrap;
       cursor: pointer;
-      transition: background-color var(--ww-fast) var(--ww-ease), transform var(--ww-fast) var(--ww-ease);
+      transition:
+        background-color var(--ww-medium) var(--ww-ease-out),
+        border-color var(--ww-medium) var(--ww-ease-out),
+        color var(--ww-medium) var(--ww-ease-out),
+        box-shadow var(--ww-medium) var(--ww-ease-out),
+        transform var(--ww-medium) var(--ww-ease-spring);
     }
-    :host(:active) {
-      transform: scale(0.98);
+    @media (hover: hover) and (pointer: fine) {
+      :host(:hover:not(:disabled)) {
+        transform: translateY(-1px);
+      }
+      :host(.ww-button--primary:hover:not(:disabled)),
+      :host(.ww-button--light:hover:not(:disabled)) {
+        box-shadow: var(--ww-shadow-soft);
+      }
+      :host(.ww-button--outline:hover:not(:disabled)) {
+        background: var(--hover, rgba(127, 127, 127, 0.1));
+      }
+      :host(.ww-button--soft:hover:not(:disabled)) {
+        background: var(--hover, var(--surface-2));
+      }
+    }
+    :host(:active:not(:disabled)) {
+      transform: scale(0.96);
+      transition-duration: var(--ww-fast);
     }
     :host(:disabled) {
       opacity: 0.5;

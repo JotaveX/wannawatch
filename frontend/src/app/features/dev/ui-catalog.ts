@@ -1,17 +1,17 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
-import { SocialMock, ViewMode } from '../../mocks/social.mock';
+import { ChangeDetectionStrategy, Component, signal } from '@angular/core';
+import { Avatar } from '../../shared/ui/avatar';
 import { Button } from '../../shared/ui/button';
 import { Icon } from '../../shared/ui/icon';
 import { IconButton } from '../../shared/ui/icon-button';
 import { AppMark, Logo } from '../../shared/ui/logo';
-import { MatchBadge } from '../../shared/ui/match-badge';
+import { Mascot } from '../../shared/ui/mascot';
 import { Poster } from '../../shared/ui/poster';
 import { Segmented, SegmentOption } from '../../shared/ui/segmented';
 
 /** Vitrine dos componentes base (só existe em desenvolvimento: /dev/componentes). */
 @Component({
   selector: 'ww-ui-catalog',
-  imports: [Button, Icon, IconButton, Logo, AppMark, MatchBadge, Poster, Segmented],
+  imports: [Avatar, Button, Icon, IconButton, Logo, AppMark, Mascot, Poster, Segmented],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @for (theme of themes; track theme) {
@@ -20,15 +20,20 @@ import { Segmented, SegmentOption } from '../../shared/ui/segmented';
 
         <div class="row">
           <ww-logo [size]="32" />
+          <ww-logo [size]="32" [mark]="true" />
           <ww-app-mark [size]="40" />
-          <ww-match-badge [percent]="social.matchPercent(42)" />
+          <ww-mascot [size]="64" />
+          <ww-mascot variant="face" [size]="40" />
+          @for (u of users; track u.id) {
+            <ww-avatar [user]="u" />
+          }
         </div>
 
         <div class="row">
           <button wwButton variant="primary">Quero ver</button>
           <a wwButton variant="light" href="#" (click)="$event.preventDefault()"><ww-icon name="play" [size]="16" />Assistir trailer</a>
           <button wwButton variant="glass"><ww-icon name="info" [size]="18" />Mais informações</button>
-          <button wwButton variant="outline">Votar no grupo</button>
+          <button wwButton variant="outline">Criar sala</button>
           <button wwButton variant="soft">Placeholder</button>
         </div>
 
@@ -43,7 +48,7 @@ import { Segmented, SegmentOption } from '../../shared/ui/segmented';
         </div>
 
         <div class="row">
-          <ww-segmented label="Modo" [options]="modes" [(value)]="mode" />
+          <ww-segmented label="Deck" [options]="decks" [(value)]="deck" />
           <ww-segmented label="Tipo" variant="pill" [options]="tabs" [(value)]="tab" />
         </div>
 
@@ -97,17 +102,22 @@ import { Segmented, SegmentOption } from '../../shared/ui/segmented';
   `,
 })
 export class UiCatalog {
-  protected readonly social = inject(SocialMock);
   protected readonly themes = ['light', 'dark'] as const;
   protected readonly seeds = [0, 1, 2, 3, 4, 5];
-  protected readonly modes: SegmentOption<ViewMode>[] = [
-    { value: 'group', label: 'Grupo' },
-    { value: 'solo', label: 'Solo' },
+  protected readonly users = [
+    { id: 1, username: 'jotave', displayName: 'Jotave' },
+    { id: 2, username: 'bia', displayName: 'Bia' },
+    { id: 3, username: 'caio', displayName: 'Caio Lima' },
+  ];
+  protected readonly decks: SegmentOption<'all' | 'movie' | 'series'>[] = [
+    { value: 'all', label: 'Tudo' },
+    { value: 'movie', label: 'Filmes' },
+    { value: 'series', label: 'Séries' },
   ];
   protected readonly tabs: SegmentOption<'movie' | 'series'>[] = [
     { value: 'movie', label: 'Filmes' },
     { value: 'series', label: 'Séries' },
   ];
-  protected readonly mode = this.social.mode;
+  protected readonly deck = signal<'all' | 'movie' | 'series'>('all');
   protected readonly tab = signal<'movie' | 'series'>('movie');
 }

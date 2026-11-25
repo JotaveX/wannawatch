@@ -16,8 +16,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Monta a Home: destaque + fileiras. As fileiras que dependem de usuário/grupo
- * ("Continue assistindo", "Deu match no grupo") são mock no front e não saem daqui.
+ * Monta a Home: destaque + fileiras do catálogo. A fileira "Seus amigos curtiram" depende de
+ * quem está logado e sai de {@code GET /api/likes/friends}.
  */
 @Service
 @Transactional(readOnly = true)

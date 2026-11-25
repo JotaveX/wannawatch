@@ -1,0 +1,87 @@
+@if (value(); as t) {
+  <div class="chosen">
+    @if (t.poster) {
+      <img [src]="t.poster.small" alt="" width="48" height="72" />
+    } @else {
+      <span class="poster-empty" aria-hidden="true"></span>
+    }
+    <span class="chosen-text">
+      <strong>{{ t.title }}</strong>
+      <span>{{ kind(t) }}@if (t.year) { · {{ t.year }}}</span>
+    </span>
+    <span class="chosen-actions">
+      <button wwButton type="button" variant="soft" size="sm" aria-haspopup="dialog" (click)="open()"
+              [attr.aria-label]="'Trocar ' + t.title">Trocar</button>
+      <button wwButton type="button" variant="outline" size="sm" (click)="value.set(null)"
+              [attr.aria-label]="'Remover ' + t.title">Remover</button>
+    </span>
+  </div>
+} @else {
+  <button wwButton type="button" variant="soft" aria-haspopup="dialog" [attr.aria-describedby]="labelledBy()"
+          (click)="open()">
+    <ww-icon name="plus" [size]="16" />
+    Escolher
+  </button>
+}
+
+<dialog #dialog class="modal" [attr.aria-labelledby]="titleId" (click)="onBackdrop($event)">
+  <div class="sheet">
+    <header class="sheet-head">
+      <div>
+        <h2 [id]="titleId">Favorito de todos os tempos</h2>
+        <p class="sheet-lead">Aquele que você vê de novo sem pensar duas vezes.</p>
+      </div>
+      <button type="button" class="sheet-x" (click)="close()" aria-label="Fechar">
+        <ww-icon name="x" [size]="18" [stroke]="2.2" />
+      </button>
+    </header>
+
+    <div class="filters">
+      <label class="search">
+        <ww-icon name="search" [size]="18" />
+        <span class="sr-only">Buscar pelo nome</span>
+        <input type="search" name="favorito-busca" placeholder="Busque um filme ou série" autocomplete="off"
+               autofocus [attr.aria-describedby]="statusId" [value]="query()"
+               (input)="query.set($any($event.target).value)"
+               (keydown.enter)="$event.preventDefault()" />
+      </label>
+      <ww-segmented label="Mostrar" [options]="kinds" [(value)]="kindFilter" />
+    </div>
+
+    <p [id]="statusId" class="status" aria-live="polite">
+      @if (loading()) {
+        Buscando…
+      } @else if (failed()) {
+        Não deu pra carregar agora. Tenta de novo?
+      } @else if (searching()) {
+        @if (items().length) {
+          {{ items().length }} {{ items().length === 1 ? 'resultado' : 'resultados' }} para “{{ query().trim() }}”
+        } @else {
+          Nada encontrado para “{{ query().trim() }}”.
+        }
+      } @else {
+        Os mais populares agora
+      }
+    </p>
+
+    <ul class="grid" [class.grid--busy]="loading()">
+      @for (t of items(); track t.id) {
+        <li>
+          <button type="button" class="pick" [class.pick--on]="value()?.id === t.id"
+                  [attr.aria-pressed]="value()?.id === t.id" (click)="pick(t)">
+            <span class="poster">
+              <ww-poster [image]="t.poster" [seed]="t.id" [title]="t.title" sizes="140px" />
+              @if (value()?.id === t.id) {
+                <span class="badge" aria-hidden="true"><ww-icon name="check" [size]="14" [stroke]="2.6" /></span>
+              }
+            </span>
+            <span class="pick-text">
+              <strong>{{ t.title }}</strong>
+              <span>{{ kind(t) }}@if (t.year) { · {{ t.year }}}</span>
+            </span>
+          </button>
+        </li>
+      }
+    </ul>
+  </div>
+</dialog>

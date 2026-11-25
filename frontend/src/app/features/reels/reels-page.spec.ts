@@ -3,7 +3,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { API_BASE_URL } from '../../core/api/api-config';
-import { SocialMock } from '../../mocks/social.mock';
+import { LikesStore } from '../../core/social/likes-store';
 import { card } from '../../../testing/fixtures';
 import { ReelsPage } from './reels-page';
 
@@ -32,24 +32,32 @@ describe('ReelsPage', () => {
 
   const key = (k: string) => document.dispatchEvent(new KeyboardEvent('keydown', { key: k }));
 
-  it('mostra a sinopse em destaque com título, match e link de detalhes', async () => {
+  it('mostra a sinopse em destaque com título e link de detalhes', async () => {
     const { el } = await render();
     const first = el.querySelector('ww-reel-item')!;
     expect(first.querySelector('.synopsis')?.textContent).toBe('Sinopse um.');
     expect(first.querySelector('h2')?.textContent).toBe('Primeiro');
-    expect(first.textContent).toContain('% match');
     expect(first.querySelector('a[href="/filme/1"]')).not.toBeNull();
   });
 
-  it('mostra as esferas dos amigos que curtiram só quando há amigos', async () => {
-    const social = TestBed.inject(SocialMock);
+  it('mostra as esferas dos amigos que curtiram só quando há amigos, e conta quem quer ver', async () => {
+    TestBed.inject(LikesStore).remember([
+      {
+        titleId: 1,
+        likedByMe: true,
+        friends: [
+          { id: 2, username: 'bia', displayName: 'Bia' },
+          { id: 3, username: 'caio', displayName: 'Caio' },
+        ],
+      },
+    ]);
     const { el } = await render();
-    const items = Array.from(el.querySelectorAll('ww-reel-item'));
-    items.forEach((item, i) => {
-      const friends = social.friendsWhoLiked(i + 1);
-      expect(item.querySelectorAll('.sphere').length).toBe(friends.length);
-      if (friends.length) expect(item.querySelector('ww-liked-by .label')?.textContent).toContain('também curti');
-    });
+    const [first, second] = Array.from(el.querySelectorAll('ww-reel-item'));
+    expect(first.querySelectorAll('.sphere').length).toBe(2);
+    expect(first.querySelector('ww-liked-by .label')?.textContent).toBe('Bia e Caio curtiram');
+    expect(first.querySelector('button[aria-label="Quero ver"]')?.getAttribute('aria-pressed')).toBe('true');
+    expect(first.querySelector('.actions span')?.textContent).toBe('3');
+    expect(second.querySelectorAll('.sphere').length).toBe(0);
   });
 
   it('J/K e setas navegam e o painel acompanha', async () => {
@@ -66,15 +74,28 @@ describe('ReelsPage', () => {
     expect(el.querySelector('.panel h3')?.textContent).toBe('Segundo');
   });
 
+  it('desfaz o quero ver se o back recusar', async () => {
+    const { fixture, el } = await render();
+    const like = el.querySelector<HTMLButtonElement>('ww-reel-item button[aria-label="Quero ver"]')!;
+    like.click();
+    http.expectOne('/api/likes/1').flush(null, { status: 500, statusText: 'Erro' });
+    await fixture.whenStable();
+    expect(like.getAttribute('aria-pressed')).toBe('false');
+  });
+
   it('quero ver e salvar alternam pelo botão e pelo teclado', async () => {
     const { fixture, el } = await render();
     const like = el.querySelector<HTMLButtonElement>('ww-reel-item button[aria-label="Quero ver"]')!;
     like.click();
     await fixture.whenStable();
     expect(like.getAttribute('aria-pressed')).toBe('true');
+    const put = http.expectOne('/api/likes/1');
+    expect(put.request.method).toBe('PUT');
+    put.flush(null);
     key('l');
     await fixture.whenStable();
     expect(like.getAttribute('aria-pressed')).toBe('false');
+    expect(http.expectOne('/api/likes/1').request.method).toBe('DELETE');
     key('s');
     await fixture.whenStable();
     expect(el.querySelector('ww-reel-item button[aria-label="Salvar na lista"]')?.getAttribute('aria-pressed')).toBe('true');

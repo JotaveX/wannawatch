@@ -1,5 +1,6 @@
 package br.com.jotave.wannawatch.shared.web;
 
+import br.com.jotave.wannawatch.auth.UnauthorizedException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -26,6 +27,21 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
     @ExceptionHandler(BadRequestException.class)
     ProblemDetail badRequest(BadRequestException e) {
         return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, e.getMessage());
+    }
+
+    @ExceptionHandler(UnauthorizedException.class)
+    ProblemDetail unauthorized(UnauthorizedException e) {
+        return ProblemDetail.forStatusAndDetail(HttpStatus.UNAUTHORIZED, e.getMessage());
+    }
+
+    @ExceptionHandler(ForbiddenException.class)
+    ProblemDetail forbidden(ForbiddenException e) {
+        return ProblemDetail.forStatusAndDetail(HttpStatus.FORBIDDEN, e.getMessage());
+    }
+
+    @ExceptionHandler(ConflictException.class)
+    ProblemDetail conflict(ConflictException e) {
+        return ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, e.getMessage());
     }
 
     @ExceptionHandler(Exception.class)

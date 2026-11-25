@@ -2,7 +2,7 @@ import { computed, DestroyRef, inject, Injectable, signal } from '@angular/core'
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CatalogApi } from '../../core/api/catalog-api';
 import { TitleCard } from '../../core/api/models';
-import { SocialMock } from '../../mocks/social.mock';
+import { LikesStore } from '../../core/social/likes-store';
 
 export type Decision = 'pass' | 'maybe' | 'like' | 'seen';
 
@@ -22,12 +22,12 @@ export function newSeed(): string {
 
 /**
  * Estado do Swipe: deck carregado aos poucos por cursor, posição atual e histórico de escolhas.
- * As escolhas ficam só na memória desta tela (persistir está fora do escopo por enquanto).
+ * "Quero ver" vai para o back (aparece para os amigos); talvez/passa/já vi ficam só nesta tela.
  */
 @Injectable()
 export class SwipeStore {
   private readonly api = inject(CatalogApi);
-  private readonly social = inject(SocialMock);
+  private readonly likes = inject(LikesStore);
   private readonly destroyRef = inject(DestroyRef);
 
   private seed = newSeed();
@@ -39,8 +39,6 @@ export class SwipeStore {
   readonly index = signal(0);
   readonly history = signal<Choice[]>([]);
   readonly status = signal<'loading' | 'ready' | 'error'>('loading');
-  /** título que "deu match" no grupo na última escolha (mock) */
-  readonly match = signal<TitleCard | null>(null);
 
   readonly current = computed(() => this.cards()[this.index()] ?? null);
   readonly next = computed(() => this.cards()[this.index() + 1] ?? null);
@@ -62,16 +60,16 @@ export class SwipeStore {
     if (!card) return;
     this.history.update((h) => [...h, { card, decision }]);
     this.index.update((i) => i + 1);
-    const everyone = this.social.friendsWhoWant(card.id) === this.social.group.members;
-    this.match.set(decision === 'like' && this.social.isGroup() && everyone ? card : null);
+    if (decision === 'like') this.likes.setLiked(card.id, true);
     this.prefetch();
   }
 
   undo(): void {
-    if (!this.history().length) return;
+    const last = this.last();
+    if (!last) return;
     this.history.update((h) => h.slice(0, -1));
     this.index.update((i) => Math.max(0, i - 1));
-    this.match.set(null);
+    if (last.decision === 'like') this.likes.setLiked(last.card.id, false);
   }
 
   /** Recomeça com outra ordem (quando o deck acaba). */
@@ -81,7 +79,6 @@ export class SwipeStore {
     this.cards.set([]);
     this.index.set(0);
     this.history.set([]);
-    this.match.set(null);
     this.fetch();
   }
 
@@ -105,7 +102,9 @@ export class SwipeStore {
           this.fetching = false;
           this.cursor = page.nextCursor;
           const seen = new Set(this.cards().map((c) => c.id));
-          this.cards.update((cs) => [...cs, ...page.items.filter((c) => !seen.has(c.id))]);
+          const fresh = page.items.filter((c) => !seen.has(c.id));
+          this.cards.update((cs) => [...cs, ...fresh]);
+          this.likes.ensure(fresh.map((c) => c.id));
           this.status.set('ready');
         },
         error: () => {

@@ -3,12 +3,11 @@ import { RouterLink } from '@angular/router';
 import { HomeHero as Hero } from '../../core/api/models';
 import { length, typeLabel } from '../../core/format';
 import { titleLink } from '../../core/title-link';
-import { SocialMock } from '../../mocks/social.mock';
+import { LikesStore, likedByLabel } from '../../core/social/likes-store';
 import { Button } from '../../shared/ui/button';
 import { Icon } from '../../shared/ui/icon';
 import { AppMark } from '../../shared/ui/logo';
 import { Poster } from '../../shared/ui/poster';
-import { heroReason } from './home-rows';
 
 /**
  * Destaque da Home. A imagem recebe uma camada chapada de #141416 a 60% por inteiro:
@@ -25,7 +24,7 @@ import { heroReason } from './home-rows';
 
     <ng-content />
 
-    <div class="content">
+    <div class="content ww-stagger">
       <p class="kind"><ww-app-mark [size]="22" />{{ type() }}</p>
       <h1>
         <span class="title" [class.long]="hero().title.length > 18">{{ hero().title }}</span>
@@ -34,9 +33,8 @@ import { heroReason } from './home-rows';
         }
       </h1>
       <ul class="meta" aria-label="Informações">
-        <li class="match">{{ social.matchPercent(hero().id) }}% match</li>
-        @for (part of meta(); track part) {
-          <li class="sep">{{ part }}</li>
+        @for (part of meta(); track part; let first = $first) {
+          <li [class.sep]="!first">{{ part }}</li>
         }
         @if (hero().ageRating; as rating) {
           <li class="rating" [attr.aria-label]="'Classificação ' + rating">{{ rating }}</li>
@@ -45,7 +43,9 @@ import { heroReason } from './home-rows';
       @if (hero().overview; as overview) {
         <p class="overview">{{ overview }}</p>
       }
-      <p class="reason">{{ reason() }}</p>
+      @if (reason(); as reason) {
+        <p class="reason">{{ reason }}</p>
+      }
       <div class="actions">
         @if (hero().trailerUrl; as trailer) {
           <a wwButton variant="light" size="lg" [href]="trailer" target="_blank" rel="noopener">
@@ -72,6 +72,14 @@ import { heroReason } from './home-rows';
       position: absolute !important;
       inset: 0;
       border-radius: 0;
+      animation: hero-settle 1.6s var(--ww-ease-out) both;
+    }
+    /* o fundo chega um pouco ampliado e assenta */
+    @keyframes hero-settle {
+      from {
+        opacity: 0;
+        transform: scale(1.06);
+      }
     }
     .shade {
       position: absolute;
@@ -142,13 +150,6 @@ import { heroReason } from './home-rows';
       content: '·' / '';
       margin-right: 10px;
     }
-    .match {
-      padding: 3px 8px;
-      border-radius: 6px;
-      background: var(--ww-yellow);
-      color: var(--ww-bg-dark);
-      font-weight: 700;
-    }
     .rating {
       padding: 2px 6px;
       border: var(--ww-hairline) solid currentColor;
@@ -190,11 +191,12 @@ import { heroReason } from './home-rows';
 })
 export class HomeHero {
   readonly hero = input.required<Hero>();
-  protected readonly social = inject(SocialMock);
+  private readonly likes = inject(LikesStore);
 
   protected readonly type = computed(() => typeLabel(this.hero()));
   protected readonly link = computed(() => titleLink(this.hero()));
-  protected readonly reason = computed(() => heroReason(this.hero(), this.social));
+  /** "Bia e Caio curtiram", se alguém curtiu */
+  protected readonly reason = computed(() => likedByLabel(this.likes.friends(this.hero().id)));
   protected readonly meta = computed(() => {
     const h = this.hero();
     return [h.genres[0]?.name, h.year ? String(h.year) : null, length(h)].filter((p): p is string => !!p);

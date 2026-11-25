@@ -1,14 +1,21 @@
 import { ChangeDetectionStrategy, Component, input } from '@angular/core';
+import { Mascot } from './mascot';
 
-/** "wannawatch" em Inter Tight 700, espaçamento apertado, com o "?" em pink. */
+/**
+ * "wannawatch" em Inter Tight 700, espaçamento apertado, com o "?" em pink.
+ * Com `mark`, o fantasminha aparece antes do nome (cabeçalhos e login).
+ */
 @Component({
   selector: 'ww-logo',
+  imports: [Mascot],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { '[style.font-size.px]': 'size()' },
-  template: `wannawatch<span class="q">?</span>`,
+  template: `@if (mark()) {<ww-mascot class="mark" variant="face" [size]="round(size() * 1.25)" />}<span>wannawatch<span class="q">?</span></span>`,
   styles: `
     :host {
-      display: inline-block;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.32em;
       font-family: var(--ww-font-display);
       font-weight: 700;
       letter-spacing: var(--ww-tracking-logo);
@@ -23,6 +30,8 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 })
 export class Logo {
   readonly size = input(24);
+  readonly mark = input(false);
+  protected readonly round = Math.round;
 }
 
 /** Ícone do app: quadrado arredondado pink com "?" branco. */

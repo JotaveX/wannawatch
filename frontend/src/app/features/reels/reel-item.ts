@@ -12,16 +12,15 @@ import { RouterLink } from '@angular/router';
 import { TitleCard } from '../../core/api/models';
 import { metaLine } from '../../core/format';
 import { titleLink } from '../../core/title-link';
-import { SocialMock } from '../../mocks/social.mock';
+import { LikesStore } from '../../core/social/likes-store';
 import { Icon } from '../../shared/ui/icon';
-import { MatchBadge } from '../../shared/ui/match-badge';
 import { Poster } from '../../shared/ui/poster';
 import { LikedBy } from './liked-by';
 
 /** Um reel: a sinopse em destaque sobre a imagem escurecida, com as ações à direita. */
 @Component({
   selector: 'ww-reel-item',
-  imports: [RouterLink, Icon, MatchBadge, Poster, LikedBy],
+  imports: [RouterLink, Icon, Poster, LikedBy],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <article [attr.aria-labelledby]="'reel-' + card().id">
@@ -38,7 +37,6 @@ import { LikedBy } from './liked-by';
           <span>{{ meta() }}</span>
         </div>
         <div class="chips">
-          <ww-match-badge [percent]="social.matchPercent(card().id)" />
           <a class="outline" [routerLink]="link()">Ver detalhes</a>
         </div>
       </div>
@@ -49,7 +47,7 @@ import { LikedBy } from './liked-by';
                   aria-label="Quero ver" (click)="like.emit()">
             <ww-icon [name]="liked() ? 'heart-filled' : 'heart'" [size]="24" />
           </button>
-          <span aria-hidden="true">{{ social.wantCount(card().id) }}</span>
+          <span aria-hidden="true">{{ likeCount() || 'Quero ver' }}</span>
         </div>
         <div>
           <button type="button" class="round" [class.on]="saved()" [attr.aria-pressed]="saved()"
@@ -87,7 +85,9 @@ export class ReelItem {
   /** avisa quando este reel ocupa a maior parte da tela */
   readonly visible = output<number>();
 
-  protected readonly social = inject(SocialMock);
+  private readonly likes = inject(LikesStore);
+  /** quantas pessoas querem ver (os amigos + eu) */
+  protected readonly likeCount = computed(() => this.likes.friends(this.card().id).length + (this.liked() ? 1 : 0));
   protected readonly meta = computed(() => [metaLine(this.card()), this.card().year].filter(Boolean).join(' · '));
   protected readonly link = computed(() => titleLink(this.card()));
 

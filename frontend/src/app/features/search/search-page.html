@@ -43,15 +43,16 @@
           @for (hit of s.items; track hit.id) {
             <li>
               <a [routerLink]="titleLink(hit)">
-                <ww-poster class="cover" [image]="hit.poster" [widths]="[342, 780]" sizes="96px"
+                <ww-poster class="art" ratio="backdrop"
+                           [image]="hit.backdrop ?? hit.poster"
+                           [widths]="hit.backdrop ? [780, 1280] : [342, 780]"
+                           sizes="(max-width: 479px) 50vw, 300px"
                            [seed]="hit.id" [title]="hit.title" />
-                <span class="text">
-                  <strong>{{ hit.title }}</strong>
-                  <span class="meta">{{ metaLine(hit) }}@if (hit.year) { · {{ hit.year }} }</span>
-                  @if (matchLabel(hit); as why) {
-                    <span class="why">{{ why }}</span>
-                  }
-                </span>
+                <span class="name">{{ hit.title }}</span>
+                <span class="meta">{{ metaLine(hit) }}@if (hit.year) { · {{ hit.year }} }</span>
+                @if (matchLabel(hit); as why) {
+                  <span class="why">{{ why }}</span>
+                }
               </a>
             </li>
           }
@@ -63,6 +64,7 @@
         }
       } @else {
         <div class="empty">
+          <ww-mascot [size]="96" />
           <h2>Nada encontrado para “{{ s.term }}”</h2>
           <p>Tente outro nome, o título original ou o nome de alguém do elenco.</p>
         </div>
@@ -70,6 +72,7 @@
     }
     @case ('error') {
       <div class="empty" role="alert">
+        <ww-mascot [size]="96" />
         <h2>Não deu pra buscar agora</h2>
         <p>Confira se o back-end está rodando.</p>
         <button wwButton variant="light" (click)="retry()">Tentar de novo</button>
@@ -77,8 +80,8 @@
     }
     @case ('loading') {
       <ul class="results" aria-hidden="true">
-        @for (n of [1, 2, 3, 4]; track n) {
-          <li class="sk"><span class="sk-cover"></span><span class="sk-text"></span></li>
+        @for (n of [1, 2, 3, 4, 5, 6, 7, 8]; track n) {
+          <li class="sk"><span class="sk-art"></span><span class="sk-text"></span></li>
         }
       </ul>
     }

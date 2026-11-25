@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component } from '@angular/core';
-import { AppMark, Logo } from '../../shared/ui/logo';
+import { Logo } from '../../shared/ui/logo';
+import { Mascot } from '../../shared/ui/mascot';
 
 /**
  * Sobre e créditos. A TMDB exige o logo dela (menos destacado que o nosso) e o aviso em inglês;
@@ -7,12 +8,12 @@ import { AppMark, Logo } from '../../shared/ui/logo';
  */
 @Component({
   selector: 'ww-about-page',
-  imports: [Logo, AppMark],
+  imports: [Logo, Mascot],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <article>
+    <article class="ww-stagger">
       <header>
-        <ww-app-mark [size]="56" />
+        <ww-mascot [size]="112" />
         <h1><ww-logo [size]="40" /></h1>
         <p class="lead">Descubra o que assistir sozinho ou com a galera: swipe, reels de sinopses e listas que dão match.</p>
       </header>

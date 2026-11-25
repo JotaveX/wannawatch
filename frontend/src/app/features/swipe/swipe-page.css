@@ -85,32 +85,6 @@ header {
 .message p {
   color: var(--ww-gray-text);
 }
-.match {
-  position: absolute;
-  left: 12px;
-  right: 12px;
-  bottom: 12px;
-  z-index: 5;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: var(--ww-space-4);
-  border: var(--ww-hairline) solid var(--ww-border);
-  border-radius: var(--ww-radius-lg);
-  background: var(--ww-white);
-}
-.match strong {
-  font-family: var(--ww-font-display);
-  font-size: 20px;
-  letter-spacing: -0.02em;
-  color: var(--ww-pink-strong);
-}
-.match div {
-  display: flex;
-  gap: var(--ww-space-2);
-  margin-top: var(--ww-space-2);
-}
-
 .actions {
   display: flex;
   justify-content: center;
@@ -131,7 +105,7 @@ header {
 
 @media (min-width: 1024px) {
   .layout {
-    height: 100dvh;
+    height: var(--ww-view-h);
     gap: var(--ww-space-10);
     padding: 0 var(--ww-space-8);
   }

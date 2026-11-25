@@ -27,6 +27,7 @@ export class App {
   );
 
   protected readonly feed = computed(() => this.meta().shell === 'feed');
+  protected readonly bare = computed(() => this.meta().shell === 'bare');
 
   /**
    * Com <base href="/">, "#conteudo" apontaria para "/#conteudo" (recarregaria a Home),

@@ -19,9 +19,11 @@
             }
           </h1>
           <ul class="meta" aria-label="Informações">
-            <li class="match">{{ social.matchPercent(d.id) }}% match</li>
-            @for (part of meta(); track part) {
-              <li class="sep">{{ part }}</li>
+            @if (likedBy(); as likedBy) {
+              <li class="friends">{{ likedBy }}</li>
+            }
+            @for (part of meta(); track part; let first = $first) {
+              <li [class.sep]="!first || !!likedBy()">{{ part }}</li>
             }
             @if (d.ageRating) {
               <li class="rating" [attr.aria-label]="'Classificação ' + d.ageRating">{{ d.ageRating }}</li>

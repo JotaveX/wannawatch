@@ -21,6 +21,7 @@ import { titleLink } from '../../core/title-link';
 import { TopNav } from '../../layout/top-nav';
 import { Button } from '../../shared/ui/button';
 import { Icon } from '../../shared/ui/icon';
+import { Mascot } from '../../shared/ui/mascot';
 import { Poster } from '../../shared/ui/poster';
 
 export const MIN_CHARS = 2;
@@ -47,7 +48,7 @@ export function matchLabel(hit: SearchHit): string | null {
 
 @Component({
   selector: 'ww-search-page',
-  imports: [RouterLink, TopNav, Button, Icon, Poster],
+  imports: [RouterLink, TopNav, Button, Icon, Mascot, Poster],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './search-page.html',
   styleUrl: './search-page.css',

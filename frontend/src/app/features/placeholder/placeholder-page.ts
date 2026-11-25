@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { Button } from '../../shared/ui/button';
 import { Icon, IconName } from '../../shared/ui/icon';
+import { Mascot } from '../../shared/ui/mascot';
 
 /**
  * Tela provisória. Usada para o que ainda não existe (Grupos, Perfil, Séries, Filmes,
@@ -9,11 +10,15 @@ import { Icon, IconName } from '../../shared/ui/icon';
  */
 @Component({
   selector: 'ww-placeholder-page',
-  imports: [RouterLink, Button, Icon],
+  imports: [RouterLink, Button, Icon, Mascot],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <section>
-      <span class="mark"><ww-icon [name]="icon()" [size]="30" /></span>
+    <section class="ww-stagger">
+      @if (mascot()) {
+        <ww-mascot class="mascot" [size]="120" />
+      } @else {
+        <span class="mark"><ww-icon [name]="icon()" [size]="30" /></span>
+      }
       <h1>{{ heading() }}</h1>
       <p>{{ message() }}</p>
       <a wwButton variant="soft" routerLink="/swipe">Bora dar uns swipes</a>
@@ -44,6 +49,9 @@ import { Icon, IconName } from '../../shared/ui/icon';
       border-radius: var(--ww-radius-md);
       color: var(--text);
     }
+    .mascot {
+      margin-bottom: var(--ww-space-2);
+    }
     h1 {
       font-size: 32px;
       font-weight: 700;
@@ -58,4 +66,6 @@ export class PlaceholderPage {
   readonly heading = input('Em breve');
   readonly message = input('Essa parte do wannawatch? ainda está no forno.');
   readonly icon = input<IconName>('info');
+  /** troca o ícone pelo fantasminha (404) */
+  readonly mascot = input(false);
 }

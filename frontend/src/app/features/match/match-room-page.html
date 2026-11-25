@@ -1,0 +1,220 @@
+@if (store.status() === 'ready' && store.waiting() && store.room(); as room) {
+  <ww-match-waiting [room]="room" [meId]="auth.user()?.id" [notice]="store.notice()"
+                    [starting]="store.starting()" [startError]="store.startError()" [busy]="leaving()"
+                    (start)="store.startVoting()" (invite)="invite()" (leave)="leave()" (close)="closeRoom()" />
+  @if (toast(); as text) {
+    <p class="toast waiting-toast" role="status">{{ text }}</p>
+  }
+} @else {
+<div class="layout">
+  <div class="center">
+    <h1 class="visually-hidden">Sala de Match {{ roomCode() }}</h1>
+    <header>
+      <a routerLink="/match" class="back" aria-label="Voltar para o Match"><ww-icon name="arrow-left" [size]="20" [stroke]="2.2" /></a>
+      <div class="room-id">
+        <span class="label">Sala</span>
+        <strong class="code">{{ roomCode() }}</strong>
+      </div>
+      <div class="head-actions">
+        @if (store.room() && !store.matched()) {
+          <button class="leave leave-mobile" type="button" (click)="leave()" [disabled]="leaving()">Sair</button>
+        }
+        <button wwButton variant="soft" size="sm" (click)="invite()">
+          <ww-icon name="send" [size]="16" [stroke]="2.2" />Convidar
+        </button>
+      </div>
+    </header>
+
+    @if (store.status() === 'ready') {
+      <ul class="people" aria-label="Quem está na sala">
+        @for (p of store.participants(); track p.user.id) {
+          <li>
+            <ww-avatar [user]="p.user" [size]="36" />
+            <span class="who">
+              <strong>{{ p.user.id === auth.user()?.id ? 'Você' : p.user.displayName }}</strong>
+              <span>{{ p.votes }} {{ p.votes === 1 ? 'voto' : 'votos' }}</span>
+            </span>
+          </li>
+        }
+      </ul>
+      <p class="status" role="status">{{ status() }}</p>
+      <p class="visually-hidden">Atalhos: seta para a direita quero ver, esquerda passa, Z volta o último.</p>
+    }
+
+    <div class="deck" #deck>
+      @switch (store.status()) {
+        @case ('loading') {
+          <div class="placeholder" aria-busy="true" aria-label="Entrando na sala"></div>
+        }
+        @case ('notfound') {
+          <div class="placeholder message" role="alert">
+            <h2>Sala não encontrada</h2>
+            <p>Confira o código {{ roomCode() }} com quem te chamou.</p>
+            <a wwButton variant="primary" routerLink="/match">Voltar para o Match</a>
+          </div>
+        }
+        @case ('locked') {
+          <div class="placeholder message" role="alert">
+            <h2>Essa sala já começou</h2>
+            <p>A galera da sala {{ roomCode() }} já está votando. Crie uma sala nova ou entre em outra.</p>
+            <a wwButton variant="primary" routerLink="/match">Ver salas abertas</a>
+          </div>
+        }
+        @case ('closed') {
+          <div class="placeholder message" role="alert">
+            <h2>A sala foi fechada</h2>
+            <p>Quem criou a sala {{ roomCode() }} fechou ela.</p>
+            <a wwButton variant="primary" routerLink="/match">Ver salas abertas</a>
+          </div>
+        }
+        @case ('error') {
+          <div class="placeholder message" role="alert">
+            <h2>Não deu pra entrar na sala</h2>
+            <p>Confira se o back-end está rodando.</p>
+            <button wwButton variant="primary" (click)="store.start(code())">Tentar de novo</button>
+          </div>
+        }
+        @default {
+          @if (store.winner(); as w) {
+            <section #winnerCard class="placeholder winner" [class.celebrate]="store.freshMatch()"
+                     [class.hidden-by-zoom]="zooming()" aria-labelledby="deu-match" role="status">
+              <ww-poster class="winner-art" ratio="fill" [image]="w.poster" [widths]="[342, 780]" sizes="420px"
+                         [seed]="w.id" [title]="w.title" [showTitle]="false" />
+              <div class="winner-shade" aria-hidden="true"></div>
+              @if (store.freshMatch()) {
+                <div class="hearts" aria-hidden="true">
+                  @for (h of [0, 1, 2, 3, 4, 5, 6, 7]; track h) {
+                    <span class="heart" [style.--h]="h"><ww-icon name="heart-filled" [size]="h % 3 === 0 ? 30 : 20" /></span>
+                  }
+                </div>
+              }
+              <div class="winner-text">
+                <span class="kicker">Deu match!</span>
+                <h2 id="deu-match">{{ w.title }}</h2>
+                <p class="facts">{{ winnerFacts() }}</p>
+                <div class="together">
+                  <span class="faces" aria-hidden="true">
+                    @for (p of store.participants(); track p.user.id) {
+                      <ww-avatar [user]="p.user" [size]="30" />
+                    }
+                  </span>
+                  <p>Todo mundo na sala quer ver.</p>
+                </div>
+                <div class="winner-actions">
+                  <button wwButton variant="light" type="button" (click)="openWinner()">Ver detalhes</button>
+                  @if (countdown()) {
+                    <button wwButton variant="glass" type="button" (click)="stay()">Ficar na sala</button>
+                  } @else {
+                    <a wwButton variant="glass" routerLink="/match">Nova sala</a>
+                  }
+                </div>
+              </div>
+              @if (countdown()) {
+                <div class="countdown" [style.--ww-countdown]="celebrateMs + 'ms'">
+                  <span class="visually-hidden">Abrindo os detalhes em alguns segundos.</span>
+                </div>
+              }
+            </section>
+          } @else if (store.deckStatus() === 'error') {
+            <div class="placeholder message" role="alert">
+              <h2>Não deu pra carregar os títulos</h2>
+              <button wwButton variant="primary" (click)="store.retryDeck()">Tentar de novo</button>
+            </div>
+          } @else if (store.deckStatus() === 'loading') {
+            <div class="placeholder" aria-busy="true" aria-label="Carregando títulos"></div>
+          } @else if (store.finished()) {
+            <div class="placeholder message">
+              <h2>Você votou em tudo!</h2>
+              <p>Ainda não teve um título que todo mundo quis. Espere a galera terminar ou volte um voto.</p>
+              <button wwButton variant="outline" (click)="leave()" [disabled]="leaving()">Sair da sala</button>
+            </div>
+          }
+          @if (!store.matched()) {
+            @for (card of stack(); track card.id) {
+              <ww-swipe-card [card]="card" [interactive]="$last" [vertical]="false" (decided)="onDecided($event)" />
+            }
+          }
+        }
+      }
+
+      @if (store.problem(); as problem) {
+        <p class="toast" role="alert">{{ problem }}</p>
+      } @else if (toast(); as text) {
+        <p class="toast" role="status">{{ text }}</p>
+      }
+    </div>
+
+    @if (store.status() === 'ready' && !store.matched()) {
+      <div class="actions" role="group" aria-label="Voto">
+        <button wwIconButton label="Voltar o último" (click)="undo()" [disabled]="!store.history().length">
+          <ww-icon name="undo" [size]="18" [stroke]="2.2" />
+        </button>
+        <button wwIconButton label="Passar" size="lg" (click)="act('pass')" [disabled]="!store.current()">
+          <ww-icon name="x" [size]="24" [stroke]="2.2" />
+        </button>
+        <button wwIconButton label="Quero ver" size="lg" variant="pink" (click)="act('like')" [disabled]="!store.current()">
+          <ww-icon name="heart-filled" [size]="26" />
+        </button>
+      </div>
+    }
+  </div>
+
+  <!-- painel da direita (desktop) -->
+  <aside class="panel" aria-label="Sobre a sala">
+    @if (store.room(); as room) {
+      <section aria-labelledby="sala">
+        <h2 id="sala">Sala {{ room.code }}</h2>
+        <p class="facts">{{ filters() }}</p>
+        <p class="note">Todo mundo vota no mesmo deck, na mesma ordem. O primeiro título com "quero ver" de todos é o escolhido.</p>
+        <button wwButton variant="outline" size="sm" (click)="invite()">Copiar link da sala</button>
+      </section>
+
+      <section aria-labelledby="galera">
+        <h2 id="galera">Na sala</h2>
+        <ul class="roster">
+          @for (p of room.participants; track p.user.id) {
+            <li>
+              <ww-avatar [user]="p.user" [size]="32" />
+              <span>{{ p.user.id === auth.user()?.id ? 'Você' : p.user.displayName }}</span>
+              <span class="count">{{ p.likes }} de {{ p.votes }} curtidos</span>
+            </li>
+          }
+        </ul>
+        <button class="leave" type="button" (click)="leave()" [disabled]="leaving()">Sair da sala</button>
+      </section>
+    }
+
+    <section aria-labelledby="atalhos">
+      <h2 id="atalhos">Atalhos</h2>
+      <dl class="keys">
+        <div><dt><kbd>→</kbd></dt><dd>Quero ver</dd></div>
+        <div><dt><kbd>←</kbd></dt><dd>Passar</dd></div>
+        <div><dt><kbd>Z</kbd></dt><dd>Voltar o último</dd></div>
+      </dl>
+    </section>
+  </aside>
+</div>
+}
+
+<!-- festa do match: confete por cima de tudo (camada do topo, sem pegar cliques) -->
+@if (confetti().length) {
+  <div #stage class="stage" popover="manual" aria-hidden="true">
+    <span class="burst" [style.left.px]="confetti()[0].x" [style.top.px]="confetti()[0].y"></span>
+    @for (c of confetti(); track $index) {
+      <span class="confetto" [class.round]="c.round"
+            [style.left.px]="c.x" [style.top.px]="c.y" [style.width.px]="c.w" [style.height.px]="c.h"
+            [style.background]="c.color" [style.--dx]="c.dx + 'px'" [style.--dy]="c.dy + 'px'"
+            [style.--r]="c.rotate + 'deg'" [style.animation-delay.ms]="c.delay"
+            [style.animation-duration.ms]="c.duration"></span>
+    }
+  </div>
+}
+
+<!-- a carta vencedora crescendo até a tela cheia; vira a transição para os detalhes -->
+@if (zooming() && store.winner(); as w) {
+  <div #zoom class="zoom" popover="manual" aria-hidden="true">
+    <ww-poster class="zoom-art" ratio="fill" [image]="w.poster" [widths]="[342, 780]" sizes="420px"
+               [seed]="w.id" [title]="w.title" [showTitle]="false" />
+    <div class="zoom-shade"></div>
+  </div>
+}

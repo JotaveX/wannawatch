@@ -145,3 +145,82 @@ export interface ApiProblem {
   title?: string;
   detail?: string;
 }
+
+// --- Usuários, curtidas e Match (espelho de auth/, social/ e match/ no back) ---
+
+export interface UserRef {
+  id: number;
+  username: string;
+  displayName: string;
+  /** índice de USER_COLORS (core/social/user-colors.ts); ausente = cor fixa pelo id */
+  color?: number;
+  /** índice de BU_MASCOTS (shared/ui/mascots.ts) usado como avatar; null = iniciais */
+  mascot?: number | null;
+}
+
+export interface ProfileStats {
+  likes: number;
+  matches: number;
+}
+
+/** GET/PUT /api/me/profile */
+export interface Profile {
+  user: UserRef;
+  email: string | null;
+  favoriteGenre: GenreRef | null;
+  favoriteTitle: TitleCard | null;
+  stats: ProfileStats;
+}
+
+export interface ProfileUpdate {
+  displayName: string;
+  color: number;
+  mascot: number | null;
+  favoriteGenreId: number | null;
+  favoriteTitleId: number | null;
+}
+
+export interface LoginResponse {
+  token: string;
+  user: UserRef;
+}
+
+/** Para um título: se eu curti e quais amigos (todos os outros usuários) curtiram. */
+export interface TitleLikes {
+  titleId: number;
+  likedByMe: boolean;
+  friends: UserRef[];
+}
+
+export interface FriendsLiked {
+  title: TitleCard;
+  likedByMe: boolean;
+  friends: UserRef[];
+}
+
+/** WAITING: esperando a galera (dá pra entrar); VOTING: votando; MATCHED: deu match. */
+export type RoomStatus = 'WAITING' | 'VOTING' | 'MATCHED';
+
+export interface RoomParticipant {
+  user: UserRef;
+  votes: number;
+  likes: number;
+  joinedAt: string;
+}
+
+export interface Room {
+  code: string;
+  mediaType: MediaType | null;
+  genre: GenreRef | null;
+  owner: UserRef;
+  participants: RoomParticipant[];
+  status: RoomStatus;
+  /** índice do mascote sorteado para a sala (ver features/match/room-mascots.ts) */
+  mascot: number;
+  /** título em que todos deram "quero ver"; null enquanto a sala está aberta */
+  winner: TitleCard | null;
+  /** quando o dono começou a votação; null enquanto espera a galera */
+  startedAt: string | null;
+  matchedAt: string | null;
+  createdAt: string;
+}

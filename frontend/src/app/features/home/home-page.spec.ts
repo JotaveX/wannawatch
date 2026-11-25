@@ -3,7 +3,8 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { API_BASE_URL } from '../../core/api/api-config';
-import { homeResponse } from '../../../testing/fixtures';
+import { FriendsLiked } from '../../core/api/models';
+import { card, homeResponse } from '../../../testing/fixtures';
 import { HomePage } from './home-page';
 
 describe('HomePage', () => {
@@ -21,12 +22,13 @@ describe('HomePage', () => {
     http = TestBed.inject(HttpTestingController);
   });
 
-  async function render(response = homeResponse()) {
+  async function render(response = homeResponse(), friends: FriendsLiked[] = []) {
     const fixture = TestBed.createComponent(HomePage);
     await fixture.whenStable();
     const el = fixture.nativeElement as HTMLElement;
     expect(el.querySelector('[aria-busy="true"]')).not.toBeNull();
     http.expectOne('/api/home').flush(response);
+    http.expectOne((r) => r.url === '/api/likes/friends').flush(friends);
     await fixture.whenStable();
     return el;
   }
@@ -45,13 +47,22 @@ describe('HomePage', () => {
     expect(el.textContent).not.toContain('Assistir trailer');
   });
 
+  it('explica o destaque por quem curtiu', async () => {
+    const base = homeResponse();
+    const el = await render(base, [
+      { title: card(1), likedByMe: false, friends: [{ id: 2, username: 'bia', displayName: 'Bia' }] },
+    ]);
+    expect(el.querySelector('.reason')?.textContent).toBe('Bia curtiu');
+  });
+
   it('desenha as fileiras com títulos e o Top 10 numerado', async () => {
-    const el = await render();
+    const el = await render(homeResponse(), [
+      { title: card(90), likedByMe: false, friends: [{ id: 2, username: 'bia', displayName: 'Bia' }] },
+    ]);
     const headings = Array.from(el.querySelectorAll('h2')).map((h) => h.textContent?.trim());
     expect(headings).toEqual([
-      'Continue assistindo',
       'Top 10 de hoje no wannawatch?',
-      'Deu match na Sexta do cinema',
+      'Seus amigos curtiram',
       'Porque você curtiu Noite em Marte',
       'Séries pra maratonar',
     ]);

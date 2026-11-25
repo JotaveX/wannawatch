@@ -5,10 +5,14 @@ import { provideRouter, Router } from '@angular/router';
 import { App } from './app';
 import { routes } from './app.routes';
 
+const session = { token: 't', user: { id: 1, username: 'jotave', displayName: 'Jotave' } };
+
 describe('App (shell)', () => {
   beforeEach(() => {
+    localStorage.setItem('ww.session', JSON.stringify(session));
     TestBed.configureTestingModule({ providers: [provideRouter(routes), provideHttpClient(), provideHttpClientTesting()] });
   });
+  afterEach(() => localStorage.clear());
 
   async function render(url: string) {
     const fixture = TestBed.createComponent(App);
@@ -16,6 +20,25 @@ describe('App (shell)', () => {
     await fixture.whenStable();
     return fixture.nativeElement as HTMLElement;
   }
+
+  it('sem login, qualquer tela vai para /entrar, sem navegação, guardando a volta', async () => {
+    localStorage.clear();
+    const el = await render('/match/ABC123');
+    expect(TestBed.inject(Router).url).toBe('/entrar?volta=%2Fmatch%2FABC123');
+    expect(el.querySelector('ww-tab-bar')).toBeNull();
+    expect(el.querySelector('h1')?.textContent).toBe('Entrar');
+  });
+
+  it('logado, /entrar volta para a Home', async () => {
+    await render('/entrar');
+    expect(TestBed.inject(Router).url).toBe('/');
+  });
+
+  it('a aba Match substitui Grupos', async () => {
+    const el = await render('/swipe');
+    const tabs = Array.from(el.querySelectorAll('ww-tab-bar a')).map((a) => a.textContent?.trim());
+    expect(tabs).toEqual(['Início', 'Swipe', 'Reels', 'Match', 'Perfil']);
+  });
 
   it('Swipe usa a barra lateral e o tema claro', async () => {
     const el = await render('/swipe');

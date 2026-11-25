@@ -4,11 +4,11 @@ import br.com.jotave.wannawatch.catalog.domain.MediaType;
 import java.util.Map;
 
 /** Trechos de WHERE reaproveitados pelas listagens (tabela com alias "t"). */
-final class SqlFilters {
+public final class SqlFilters {
 
     private SqlFilters() {}
 
-    static String typeAndGenre(MediaType type, String genreSlug, Map<String, Object> params) {
+    public static String typeAndGenre(MediaType type, String genreSlug, Map<String, Object> params) {
         StringBuilder sql = new StringBuilder();
         if (type != null) {
             sql.append(" AND t.media_type = :type");

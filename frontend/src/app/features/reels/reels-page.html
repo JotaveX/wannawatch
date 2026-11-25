@@ -8,6 +8,7 @@
       }
       @case ('error') {
         <div class="feed placeholder message" role="alert">
+          <ww-mascot [size]="112" />
           <h2>Não deu pra carregar o feed</h2>
           <p>Confira se o back-end está rodando.</p>
           <button wwButton variant="light" (click)="store.load()">Tentar de novo</button>
@@ -20,15 +21,15 @@
               [card]="card"
               [index]="i"
               [eager]="i < 2"
-              [liked]="liked().has(card.id)"
+              [liked]="likes.likedByMe(card.id)"
               [saved]="saved().has(card.id)"
-              (like)="toggle(liked, card.id)"
+              (like)="likes.toggle(card.id)"
               (save)="toggle(saved, card.id)"
               (share)="share(card.id)"
               (visible)="onVisible($event)"
             />
           } @empty {
-            <div class="placeholder message"><h2>Nada por aqui ainda</h2></div>
+            <div class="placeholder message"><ww-mascot [size]="112" /><h2>Nada por aqui ainda</h2></div>
           }
           @if (store.loadingMore()) {
             <p class="more" role="status">Carregando mais…</p>
@@ -81,7 +82,7 @@
         <div><dt><kbd>L</kbd></dt><dd>Quero ver</dd></div>
         <div><dt><kbd>S</kbd></dt><dd>Salvar</dd></div>
       </dl>
-      <p class="note">"Quero ver" e "Salvar" ainda não são guardados: somem ao sair da tela.</p>
+      <p class="note">"Quero ver" fica salvo e aparece para os seus amigos. "Salvar" ainda some ao sair da tela.</p>
     </section>
   </aside>
 </div>

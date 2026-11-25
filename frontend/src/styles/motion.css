@@ -1,0 +1,219 @@
+/*
+ * Movimento do app inteiro.
+ *
+ * 1. Troca de página: View Transitions (withViewTransitions no router). A página velha some
+ *    rápido, a nova sobe com fade. No desktop com barra lateral o painel e a barra ficam parados
+ *    e só o conteúdo do painel troca.
+ * 2. Entrada em cascata: cards e seções aparecem um depois do outro (atraso por posição).
+ * 3. Hover: cards levantam com sombra macia, sem cor.
+ *
+ * Tudo respeita prefers-reduced-motion (fim do arquivo e base.css).
+ */
+
+/* ---------- 1. Troca de página ---------- */
+
+/*
+ * A página velha some rápido e só depois a nova aparece: se as duas ficam meio transparentes ao
+ * mesmo tempo, o conteúdo da anterior "fantasma" por trás da nova (ex.: Match → Perfil).
+ *
+ * A subida da nova é em pixels inteiros (ww-page-rise, em degraus). A "foto" da página é uma
+ * imagem: num translateY fracionário ela é reamostrada e o texto fica borrado até a animação
+ * acabar — e com o ease-out ela passa um bom tempo abaixo de 1px.
+ */
+::view-transition-old(root) {
+  animation: ww-fade-out 120ms var(--ww-ease) both;
+}
+::view-transition-new(root) {
+  animation:
+    ww-fade-in var(--ww-slow) var(--ww-ease-out) 90ms both,
+    ww-page-rise var(--ww-slow) step-end 90ms both;
+}
+
+/*
+ * Painel do desktop: a foto da página velha sai na hora e a da nova entra sem animação. Quem
+ * aparece com fade é a própria página nova, viva (regra logo abaixo), em cima do painel parado.
+ * Com as duas fotos cruzando, o conteúdo anterior ficava aparecendo por trás (Match → Perfil).
+ */
+::view-transition-old(ww-panel) {
+  display: none;
+}
+::view-transition-new(ww-panel) {
+  animation: none;
+}
+@media (min-width: 1024px) {
+  .shell--feed main > router-outlet + * {
+    animation: ww-fade-in var(--ww-slow) var(--ww-ease-out) both;
+  }
+}
+::view-transition-group(ww-panel) {
+  animation-duration: var(--ww-slow);
+  animation-timing-function: var(--ww-ease-out);
+  overflow: clip;
+}
+/*
+ * As páginas têm alturas diferentes (e o Perfil cresce quando os dados chegam no meio da troca).
+ * Sem isto a foto do painel é esticada até o tamanho do grupo e achata o conteúdo: aqui ela fica
+ * no tamanho real, presa no canto de cima à esquerda, e o que sobra é cortado.
+ * Centralizar não serve: a largura também muda (a barra de rolagem aparece ou some entre as
+ * páginas) e a foto ficaria em meio pixel, com o texto borrado até o fim da animação.
+ */
+::view-transition-old(ww-panel),
+::view-transition-new(ww-panel) {
+  width: 100%;
+  height: 100%;
+  object-fit: none;
+  object-position: left top;
+}
+
+/* barras de navegação ficam vivas (sem foto congelada) para o indicador deslizar de verdade */
+::view-transition-old(ww-side),
+::view-transition-old(ww-tabs) {
+  display: none;
+}
+::view-transition-new(ww-side),
+::view-transition-new(ww-tabs) {
+  animation: none;
+}
+
+/*
+ * Menu em pílula do topo: fica parado e só o fundo branco desliza até o novo link.
+ * z-index: os grupos são empilhados na ordem da página anterior e os novos vão para cima. Indo da
+ * Home (sem painel) para Séries, o painel escuro, ainda em fade, cobria o menu e deixava a pílula
+ * preta até o fim. O menu fica acima do painel; os links (ww-nav-items) acima de tudo.
+ */
+::view-transition-group(ww-nav-pill),
+::view-transition-group(ww-top-nav) {
+  z-index: 1;
+  animation-duration: var(--ww-slow);
+  animation-timing-function: var(--ww-ease-out);
+}
+::view-transition-old(ww-nav-pill),
+::view-transition-new(ww-nav-pill) {
+  animation: none;
+  height: 100%;
+}
+::view-transition-old(ww-nav-pill) {
+  display: none;
+}
+/* sem pílula na página anterior: só aparece no lugar, sem deslizar */
+::view-transition-new(ww-nav-pill):only-child {
+  animation: ww-fade-in var(--ww-medium) var(--ww-ease-out) both;
+}
+/*
+ * Links do menu: camada acima da pílula. Os grupos seguem a ordem de pintura, e a pílula
+ * (absoluta) é pintada depois dos links — sem o z-index ela cobria a lupa durante a animação.
+ * A cor (branco → escuro) troca no mesmo ritmo do deslize.
+ */
+::view-transition-group(ww-nav-items) {
+  z-index: 2;
+  animation-duration: var(--ww-slow);
+  animation-timing-function: var(--ww-ease-out);
+}
+
+/* Match → detalhes: a carta vencedora, já em tela cheia, se dissolve por cima da página nova */
+::view-transition-old(ww-match-hero) {
+  animation: ww-match-dissolve 750ms var(--ww-ease-out) both;
+}
+
+@keyframes ww-match-dissolve {
+  to {
+    opacity: 0;
+    transform: scale(1.12);
+    filter: blur(14px);
+  }
+}
+@keyframes ww-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes ww-fade-out {
+  to {
+    opacity: 0;
+  }
+}
+/* 12px → 0 seguindo o --ww-ease-out, arredondado para o pixel (usar com step-end).
+   Também usado na entrada em cascata (seção 2). */
+@keyframes ww-page-rise {
+  0% { transform: translateY(12px); }
+  0.8% { transform: translateY(11px); }
+  2.6% { transform: translateY(10px); }
+  4.6% { transform: translateY(9px); }
+  6.7% { transform: translateY(8px); }
+  9% { transform: translateY(7px); }
+  11.5% { transform: translateY(6px); }
+  14.4% { transform: translateY(5px); }
+  17.8% { transform: translateY(4px); }
+  21.8% { transform: translateY(3px); }
+  26.9% { transform: translateY(2px); }
+  34% { transform: translateY(1px); }
+  47%,
+  to {
+    transform: none;
+  }
+}
+
+/* ---------- 2. Entrada em cascata ---------- */
+
+/* Atraso pela posição; do 9º em diante entram juntos. */
+:is(
+    ww-title-row,
+    ww-title-row .track > *,
+    .results > li,
+    .ww-stagger > *
+  ) {
+  /* padrão explícito: senão o card herdaria a posição da fileira */
+  --ww-i: 9;
+  /*
+   * Sobe em pixels inteiros e sem scale: o Chrome anima transform numa camada já rasterizada, e
+   * escala ou meio pixel deixam o texto borrado até a animação acabar (Perfil, Filmes, Minha lista).
+   */
+  animation:
+    ww-fade-in var(--ww-slow) var(--ww-ease-out) backwards,
+    ww-page-rise var(--ww-slow) step-end backwards;
+  animation-delay: calc(var(--ww-i) * var(--ww-stagger));
+}
+:is(ww-title-row, ww-title-row .track > *, .results > li, .ww-stagger > *):nth-child(1) { --ww-i: 0; }
+:is(ww-title-row, ww-title-row .track > *, .results > li, .ww-stagger > *):nth-child(2) { --ww-i: 1; }
+:is(ww-title-row, ww-title-row .track > *, .results > li, .ww-stagger > *):nth-child(3) { --ww-i: 2; }
+:is(ww-title-row, ww-title-row .track > *, .results > li, .ww-stagger > *):nth-child(4) { --ww-i: 3; }
+:is(ww-title-row, ww-title-row .track > *, .results > li, .ww-stagger > *):nth-child(5) { --ww-i: 4; }
+:is(ww-title-row, ww-title-row .track > *, .results > li, .ww-stagger > *):nth-child(6) { --ww-i: 5; }
+:is(ww-title-row, ww-title-row .track > *, .results > li, .ww-stagger > *):nth-child(7) { --ww-i: 6; }
+:is(ww-title-row, ww-title-row .track > *, .results > li, .ww-stagger > *):nth-child(8) { --ww-i: 7; }
+:is(ww-title-row, ww-title-row .track > *, .results > li, .ww-stagger > *):nth-child(9) { --ww-i: 8; }
+
+/* cards de uma fileira esperam a fileira começar a subir */
+ww-title-row .track > * {
+  animation-delay: calc(120ms + var(--ww-i) * var(--ww-stagger));
+}
+
+/* ---------- 3. Hover que levanta ---------- */
+
+.ww-lift {
+  transition:
+    transform var(--ww-medium) var(--ww-ease-spring),
+    box-shadow var(--ww-medium) var(--ww-ease-out),
+    background-color var(--ww-medium) var(--ww-ease-out),
+    border-color var(--ww-medium) var(--ww-ease-out);
+}
+@media (hover: hover) and (pointer: fine) {
+  .ww-lift:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--ww-shadow-lift);
+  }
+}
+.ww-lift:active {
+  transform: translateY(0) scale(0.99);
+  transition-duration: var(--ww-fast);
+}
+
+/* ---------- Menos movimento ---------- */
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
+}

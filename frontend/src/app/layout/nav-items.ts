@@ -13,7 +13,7 @@ export const TAB_ITEMS: NavItem[] = [
   { label: 'Início', path: '/', icon: 'home', exact: true },
   { label: 'Swipe', path: '/swipe', icon: 'swipe' },
   { label: 'Reels', path: '/reels', icon: 'reels' },
-  { label: 'Grupos', path: '/grupos', icon: 'groups' },
+  { label: 'Match', path: '/match', icon: 'groups' },
   { label: 'Perfil', path: '/perfil', icon: 'profile' },
 ];
 
@@ -25,6 +25,6 @@ export const SIDE_ITEMS: NavItem[] = [
   { label: 'Séries', path: '/series', icon: 'tv' },
   { label: 'Filmes', path: '/filmes', icon: 'film' },
   { label: 'Minha lista', path: '/minha-lista', icon: 'list' },
-  { label: 'Grupos', path: '/grupos', icon: 'groups' },
+  { label: 'Match', path: '/match', icon: 'groups' },
   { label: 'Perfil', path: '/perfil', icon: 'profile' },
 ];

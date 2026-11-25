@@ -34,6 +34,7 @@ import { TAB_ITEMS } from './nav-items';
       border-top: var(--ww-hairline) solid var(--ww-border);
     }
     a {
+      position: relative;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -44,10 +45,41 @@ import { TAB_ITEMS } from './nav-items';
       font-size: 11px;
       font-weight: 500;
       text-decoration: none;
+      -webkit-tap-highlight-color: transparent;
+      transition: color var(--ww-medium) var(--ww-ease-out);
+    }
+    /* pílula atrás do ícone ativo: cresce do centro */
+    a::before {
+      content: '';
+      position: absolute;
+      top: 2px;
+      left: 50%;
+      width: 56px;
+      height: 30px;
+      margin-left: -28px;
+      border-radius: var(--ww-radius-pill);
+      background: rgba(215, 15, 69, 0.1);
+      opacity: 0;
+      transform: scale(0.5);
+      transition:
+        opacity var(--ww-medium) var(--ww-ease-out),
+        transform var(--ww-slow) var(--ww-ease-spring);
+    }
+    ww-icon {
+      position: relative;
+      margin-top: 1px;
+      transition: transform var(--ww-medium) var(--ww-ease-spring);
+    }
+    a:active ww-icon {
+      transform: scale(0.88);
     }
     a.active {
       color: var(--ww-pink-strong);
       font-weight: 600;
+    }
+    a.active::before {
+      opacity: 1;
+      transform: scale(1);
     }
   `,
 })

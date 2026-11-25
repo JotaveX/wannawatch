@@ -2,7 +2,6 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { API_BASE_URL } from '../../core/api/api-config';
-import { SocialMock } from '../../mocks/social.mock';
 import { card } from '../../../testing/fixtures';
 import { PAGE_SIZE, SwipeStore } from './swipe-store';
 
@@ -88,25 +87,20 @@ describe('SwipeStore', () => {
     expect(store.status()).toBe('ready');
   });
 
-  it('"deu match" só no modo grupo, quando todo mundo quer ver', () => {
-    const social = TestBed.inject(SocialMock);
-    const ids = Array.from({ length: 200 }, (_, i) => i + 1);
-    const everyone = ids.find((id) => social.friendsWhoWant(id) === social.group.members)!;
-    const notAll = ids.find((id) => social.friendsWhoWant(id) < social.group.members)!;
-
+  it('"quero ver" vai para o back e voltar desfaz', () => {
     store.start();
-    deck().flush({ items: [card(notAll), card(everyone), card(everyone + 1000)], nextCursor: null });
+    deck().flush({ items: range(1, 3), nextCursor: null });
     store.decide('like');
-    expect(store.match()).toBeNull();
-    store.decide('like');
-    expect(store.match()?.id).toBe(everyone);
-    store.decide('pass');
-    expect(store.match()).toBeNull();
+    const put = http.expectOne('/api/likes/1');
+    expect(put.request.method).toBe('PUT');
+    put.flush(null);
 
-    store.undo();
-    store.undo();
-    social.mode.set('solo');
-    store.decide('like');
-    expect(store.match()).toBeNull();
+    store.decide('pass');
+    http.expectNone((r) => r.url.startsWith('/api/likes/2'));
+
+    store.undo(); // desfaz o pass: nada no back
+    store.undo(); // desfaz o like
+    const del = http.expectOne('/api/likes/1');
+    expect(del.request.method).toBe('DELETE');
   });
 });

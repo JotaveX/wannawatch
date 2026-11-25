@@ -1,14 +1,13 @@
 import { ChangeDetectionStrategy, Component, computed, inject, viewChildren } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { SegmentOption } from '../../shared/ui/segmented';
 import { length, typeLabel } from '../../core/format';
 import { titleLink } from '../../core/title-link';
-import { SocialMock, ViewMode } from '../../mocks/social.mock';
+import { LikesStore, likedByLabel } from '../../core/social/likes-store';
 import { Button } from '../../shared/ui/button';
 import { Icon } from '../../shared/ui/icon';
 import { IconButton } from '../../shared/ui/icon-button';
 import { Logo } from '../../shared/ui/logo';
-import { Segmented } from '../../shared/ui/segmented';
+import { Mascot } from '../../shared/ui/mascot';
 import { SwipeCard } from './swipe-card';
 import { Decision, SwipeStore } from './swipe-store';
 
@@ -31,7 +30,7 @@ const LAST_TEXT: Record<Decision, string> = {
 
 @Component({
   selector: 'ww-swipe-page',
-  imports: [RouterLink, SwipeCard, Button, Icon, IconButton, Logo, Segmented],
+  imports: [RouterLink, SwipeCard, Button, Icon, IconButton, Logo, Mascot],
   providers: [SwipeStore],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { '(document:keydown)': 'onKey($event)' },
@@ -40,13 +39,8 @@ const LAST_TEXT: Record<Decision, string> = {
 })
 export class SwipePage {
   protected readonly store = inject(SwipeStore);
-  protected readonly social = inject(SocialMock);
+  private readonly likes = inject(LikesStore);
   private readonly cards = viewChildren(SwipeCard);
-
-  protected readonly modes: SegmentOption<ViewMode>[] = [
-    { value: 'group', label: 'Grupo' },
-    { value: 'solo', label: 'Solo' },
-  ];
 
   /** carta de baixo primeiro, para a de cima ficar por cima no DOM */
   protected readonly stack = computed(() =>
@@ -56,12 +50,12 @@ export class SwipePage {
   protected readonly status = computed(() => {
     const last = this.store.last();
     if (last) return { dot: last.decision, text: `${LAST_TEXT[last.decision]} ${last.card.title}` };
-    return {
-      dot: null,
-      text: this.social.isGroup()
-        ? `Votando com ${this.social.group.name} · ${this.social.group.members} pessoas`
-        : 'Recomendações só pra você',
-    };
+    return { dot: null, text: 'Seu "quero ver" aparece para os amigos' };
+  });
+
+  protected readonly currentLikedBy = computed(() => {
+    const c = this.store.current();
+    return c ? likedByLabel(this.likes.friends(c.id)) : null;
   });
 
   protected readonly currentFacts = computed(() => {

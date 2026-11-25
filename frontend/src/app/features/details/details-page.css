@@ -89,7 +89,7 @@ h1 {
   content: '·' / '';
   margin-right: 10px;
 }
-.match {
+.friends {
   padding: 3px 8px;
   border-radius: 6px;
   background: var(--ww-yellow);

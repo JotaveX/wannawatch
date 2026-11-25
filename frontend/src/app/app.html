@@ -1,11 +1,13 @@
 <a class="skip-link" href="#conteudo" (click)="skipToContent($event)">Pular para o conteúdo</a>
 
-<div class="shell" [class.shell--feed]="feed()">
+<div class="shell" [class.shell--feed]="feed()" [class.shell--bare]="bare()">
   @if (feed()) {
     <ww-side-nav class="side" />
   }
   <main id="conteudo" tabindex="-1">
     <router-outlet />
   </main>
-  <ww-tab-bar class="tabs" />
+  @if (!bare()) {
+    <ww-tab-bar class="tabs" />
+  }
 </div>

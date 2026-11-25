@@ -59,10 +59,29 @@ export interface RowItem {
     .art {
       margin-bottom: 4px;
       border-radius: var(--ww-radius-sm);
-      transition: transform var(--ww-fast) var(--ww-ease);
+      transition:
+        transform var(--ww-medium) var(--ww-ease-spring),
+        box-shadow var(--ww-medium) var(--ww-ease-out);
     }
-    a:hover .art {
-      transform: scale(1.02);
+    /* a imagem dá um zoom leve dentro do card enquanto o card levanta */
+    .art ::ng-deep img {
+      transition: transform var(--ww-slow) var(--ww-ease-out);
+    }
+    .name {
+      transition: color var(--ww-medium) var(--ww-ease-out);
+    }
+    @media (hover: hover) and (pointer: fine) {
+      a:hover .art {
+        transform: translateY(-4px);
+        box-shadow: var(--ww-shadow-lift);
+      }
+      a:hover .art ::ng-deep img {
+        transform: scale(1.06);
+      }
+    }
+    a:active .art {
+      transform: scale(0.98);
+      transition-duration: var(--ww-fast);
     }
     .name {
       font-size: 14px;

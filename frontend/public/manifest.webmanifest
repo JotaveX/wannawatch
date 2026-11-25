@@ -1,0 +1,15 @@
+{
+  "name": "wannawatch?",
+  "short_name": "wannawatch?",
+  "description": "Descubra filmes e séries sozinho ou com a galera.",
+  "lang": "pt-BR",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#716dca",
+  "theme_color": "#ff2d55",
+  "icons": [
+    { "src": "mascot/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "mascot/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "mascot/mascot.svg", "sizes": "any", "type": "image/svg+xml" }
+  ]
+}

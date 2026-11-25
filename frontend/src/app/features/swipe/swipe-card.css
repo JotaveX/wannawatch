@@ -47,6 +47,16 @@ article {
   position: absolute;
   top: 18px;
   left: 18px;
+  max-width: calc(100% - 90px);
+  padding: 6px 12px;
+  border-radius: var(--ww-radius-pill);
+  background: var(--ww-yellow);
+  color: var(--ww-bg-dark);
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .info {
   position: absolute;

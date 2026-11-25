@@ -1,12 +1,13 @@
 import { DOCUMENT } from '@angular/common';
-import { ChangeDetectionStrategy, Component, computed, ElementRef, inject, signal, viewChildren } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, ElementRef, inject, signal, viewChildren } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { length, typeLabel } from '../../core/format';
 import { titleLink } from '../../core/title-link';
-import { SocialMock } from '../../mocks/social.mock';
+import { LikesStore } from '../../core/social/likes-store';
 import { Button } from '../../shared/ui/button';
 import { Icon } from '../../shared/ui/icon';
 import { IconButton } from '../../shared/ui/icon-button';
+import { Mascot } from '../../shared/ui/mascot';
 import { ReelItem } from './reel-item';
 import { ReelsStore } from './reels-store';
 import { LikedBy } from './liked-by';
@@ -27,7 +28,7 @@ const KEYS: Record<string, 'prev' | 'next' | 'like' | 'save'> = {
 /** Feed vertical de sinopses (estilo TikTok), só individual. */
 @Component({
   selector: 'ww-reels-page',
-  imports: [RouterLink, ReelItem, Button, Icon, IconButton, LikedBy],
+  imports: [RouterLink, ReelItem, Button, Icon, IconButton, Mascot, LikedBy],
   providers: [ReelsStore],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { '(document:keydown)': 'onKey($event)' },
@@ -36,12 +37,11 @@ const KEYS: Record<string, 'prev' | 'next' | 'like' | 'save'> = {
 })
 export class ReelsPage {
   protected readonly store = inject(ReelsStore);
-  protected readonly social = inject(SocialMock);
+  protected readonly likes = inject(LikesStore);
   private readonly document = inject(DOCUMENT);
   private readonly reels = viewChildren(ReelItem, { read: ElementRef });
 
-  /** "quero ver" e "salvar" só valem nesta tela (sem persistência por enquanto) */
-  protected readonly liked = signal<ReadonlySet<number>>(new Set());
+  /** "quero ver" vai para o back (LikesStore); "salvar" só vale nesta tela por enquanto */
   protected readonly saved = signal<ReadonlySet<number>>(new Set());
   protected readonly active = signal(0);
   protected readonly toast = signal<string | null>(null);
@@ -55,6 +55,8 @@ export class ReelsPage {
 
   constructor() {
     this.store.load();
+    // quem curtiu cada reel que chegou
+    effect(() => this.likes.ensure(this.store.items().map((c) => c.id)));
   }
 
   protected onVisible(index: number): void {
@@ -62,7 +64,7 @@ export class ReelsPage {
     this.store.reached(index);
   }
 
-  protected toggle(set: typeof this.liked, id: number): void {
+  protected toggle(set: typeof this.saved, id: number): void {
     set.update((s) => {
       const next = new Set(s);
       if (!next.delete(id)) next.add(id);
@@ -107,7 +109,7 @@ export class ReelsPage {
     event.preventDefault();
     if (action === 'prev') this.go(-1);
     else if (action === 'next') this.go(1);
-    else if (action === 'like') this.toggle(this.liked, card.id);
+    else if (action === 'like') this.likes.toggle(card.id);
     else this.toggle(this.saved, card.id);
   }
 

@@ -1,10 +1,11 @@
 # wannawatch?
 
-Recomendação de filmes e séries — sozinho ou em grupo. Três jeitos de descobrir o que assistir:
+Recomendação de filmes e séries — sozinho ou com a galera. Quatro jeitos de descobrir o que assistir:
 
-- **Início**: vitrine no estilo Netflix, com destaque, Top 10 e fileiras por tema.
+- **Início**: vitrine no estilo Netflix, com destaque, Top 10, "Seus amigos curtiram" e fileiras por tema.
 - **Swipe**: cartas no estilo Tinder — passa, talvez, quero ver ou já assisti.
 - **Reels**: feed vertical de sinopses no estilo TikTok.
+- **Match**: swipe em conjunto numa sala; acaba no primeiro título que todo mundo quiser ver.
 
 Além disso: página de detalhes (elenco, equipe, onde assistir no Brasil, ficha técnica) e busca por
 título, elenco e gênero.
@@ -81,10 +82,21 @@ Documentação interativa (Swagger): <http://localhost:8081/swagger-ui.html>
 | `GET /api/swipe/deck?seed=&cursor=&size=` | Deck do Swipe: aleatório, mas fixo por `seed` |
 | `GET /api/reels?cursor=&size=` | Feed do Reels por popularidade |
 | `GET /api/search?q=&page=&size=` | Busca fuzzy por título, pessoa e gênero |
+| `POST /api/auth/login` · `POST /api/auth/logout` · `GET /api/auth/me` | Login (devolve o token) |
+| `PUT`/`DELETE /api/likes/{titleId}` | "Quero ver" |
+| `GET /api/likes?titleIds=1,2,3` | Para cada título: se eu curti e quais amigos curtiram |
+| `GET /api/likes/friends?size=` | Títulos que os amigos curtiram (fileira da Home) |
+| `POST /api/match/rooms` · `GET /api/match/rooms` | Cria sala (`{ mediaType?, genre? }`) · salas abertas |
+| `GET /api/match/rooms/{code}` · `POST …/join` | Estado da sala · entrar (só enquanto espera) |
+| `POST …/start` · `DELETE /api/match/rooms/{code}` | Dono começa (2+ pessoas) · dono fecha (enquanto espera) |
+| `GET …/deck?cursor=&size=` | Deck da sala, sem o que eu já votei |
+| `PUT …/votes/{titleId}` (`{ liked }`) · `DELETE …/votes/{titleId}` | Votar · desfazer voto |
+| `DELETE …/participants/me` | Sair da sala |
 
 - `type` é `MOVIE` ou `SERIES`; `genre` é o slug (ex.: `ficcao-cientifica`).
 - Listas com cursor devolvem `{ items, nextCursor }`; `nextCursor` nulo = acabou.
 - Erros seguem o formato ProblemDetail (`{ status, title, detail }`).
+- Catálogo é aberto; curtidas, Match e `/auth/me` exigem `Authorization: Bearer <token>` (401 sem ele).
 - CORS: origens liberadas em `CORS_ALLOWED_ORIGINS` (padrão `http://localhost:4200`).
 
 ## 4. Front-end
@@ -104,7 +116,8 @@ Organização (`src/app`):
 | Pasta | O que tem |
 |---|---|
 | `core/api` | Contratos da API (`models.ts`) e o cliente `CatalogApi`: o único lugar que fala com o back |
-| `mocks` | `SocialMock`: tudo que é de grupo/usuário (% match, grupo, continue assistindo). Trocar aqui quando existir back-end para isso |
+| `core/auth` | Sessão (`AuthStore`, token no localStorage), interceptor que põe o token e trata 401, guards de login |
+| `core/social` | `LikesStore`: curtidas por título (minhas e dos amigos), buscadas em lote, com atualização otimista |
 | `shared/ui` | Componentes base: logo, botões, botão redondo, seletor segmentado, pôster com placeholder, ícones |
 | `layout` | Barra de abas (celular), barra lateral estilo TikTok (desktop) e menu do topo das telas escuras |
 | `features` | Uma pasta por tela |
@@ -162,8 +175,11 @@ lateral. Os dados de "onde assistir" vêm da JustWatch, creditada em `/sobre` e 
 | `/busca?q=` | Busca | escuro |
 | `/swipe` | Swipe | claro |
 | `/reels` | Reels | escuro |
+| `/match`, `/match/:code` | Match: salas abertas e criar sala · sala de espera e votação | claro |
+| `/entrar` | Login (sem navegação) | claro |
+| `/perfil` | Quem está logado e sair | claro |
 | `/sobre` | Sobre e créditos | claro |
-| `/series`, `/filmes`, `/minha-lista`, `/grupos`, `/perfil` | Provisórias ("em breve") | claro |
+| `/series`, `/filmes`, `/minha-lista` | Provisórias ("em breve") | claro |
 | `/dev/componentes` | Vitrine de componentes (só em dev) | claro e escuro |
 
 No celular a navegação fica numa barra de abas embaixo. No desktop (a partir de 1024px), Swipe,
@@ -174,23 +190,34 @@ Atalhos de teclado:
 
 - **Swipe**: `→` quero ver, `←` passa, `↑` talvez, `↓` já assisti, `Z` volta o último.
 - **Reels**: `↓`/`J` próximo, `↑`/`K` anterior, `L` quero ver, `S` salvar.
+- **Match**: `→` quero ver, `←` passa, `Z` volta o último.
 
-## O que é de mentira (mock)
+## Login, amigos e Match
 
-Ainda não existem usuários, login, grupos nem recomendação personalizada. Tudo que é social
-sai de um lugar só, `frontend/src/app/mocks/social.mock.ts`, e é derivado do id do título
-(sempre igual para o mesmo título):
+Não há cadastro: a migration `V4` cria três contas, todas com a senha `wannawatch`:
 
-- o "% match";
-- o grupo "Sexta do cinema" (você + 3 amigos), o seletor Grupo/Solo e o avatar "JV";
-- quantos amigos querem ver, o "Deu match!" do Swipe e as esferas de quem curtiu no Reels
-  (os amigos não têm foto: as esferas mostram as iniciais);
-- as fileiras "Continue assistindo" e "Deu match na Sexta do cinema" da Home (com títulos reais);
-- o contador de "quero ver" do Reels.
+| Usuário | Nome |
+|---|---|
+| `jotave` | Jotave |
+| `bia` | Bia |
+| `caio` | Caio |
 
-As escolhas do Swipe e o "quero ver"/"salvar" do Reels ficam só na memória da tela e somem ao
-sair dela. Quando houver back-end para isso, basta trocar a implementação do `SocialMock` (e
-ligar as ações a ele); as telas não mudam.
+- O app inteiro exige login; sem sessão, qualquer tela leva a `/entrar` (e volta para onde ia).
+- Token opaco de 256 bits, válido por 30 dias; no banco fica só o SHA-256 dele. A senha é bcrypt
+  (`pgcrypto`), conferida pelo próprio Postgres.
+- Ainda não existe lista de amigos: **todo usuário é amigo de todo mundo**. "Fulano curtiu" (Home,
+  Swipe, Reels, Detalhes) mostra o "quero ver" real dos outros usuários.
+- "Quero ver" do Swipe e do Reels fica salvo. Talvez/passa/já vi do Swipe e o "salvar" do Reels
+  ainda ficam só na memória da tela.
+
+**Match**: a tela lista as salas abertas (esperando gente, de todo mundo, e as que você está votando).
+Quem cria escolhe o deck (filmes, séries ou os dois, e opcionalmente um gênero); a sala aparece com o
+nome do dono e um mascote sorteado (`public/mascot/rooms`, a lista fica em `room-mascots.ts` e o
+tamanho dela em `MatchService.MASCOTS`). Quem cria e quem entra ficam na sala de espera, que avisa
+quem entrou e saiu; o dono começa com 2 ou mais pessoas e, a partir daí, ninguém novo entra. Todo
+mundo vota no mesmo deck, na mesma ordem; a sala acaba no primeiro título com "quero ver" de
+**todos** os participantes. Quem sai tem os votos apagados, e isso pode destravar o match para quem
+ficou. O front consulta a sala a cada 2,5 s e a lista de salas a cada 4 s.
 
 ## Acessibilidade
 
@@ -211,4 +238,6 @@ ligar as ações a ele); as telas não mudam.
   numa coluna JSONB.
 - Busca fuzzy no próprio Postgres (`pg_trgm` + `unaccent`), sem serviço extra.
 - Swipe em ordem aleatória mas estável (hash do id com uma seed); Reels e Swipe paginam por cursor.
+- Match sem WebSocket: consulta periódica basta para salas pequenas. Toda escrita trava a linha da
+  sala (`SELECT … FOR UPDATE`), então dois votos simultâneos não deixam o match passar batido.
 - Front sem biblioteca de UI: componentes próprios sobre design tokens em CSS.

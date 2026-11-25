@@ -2,8 +2,8 @@
   <div class="center">
     <h1 class="visually-hidden">Swipe</h1>
     <header>
-      <a routerLink="/" class="brand" aria-label="wannawatch? — início"><ww-logo [size]="24" /></a>
-      <ww-segmented label="Modo" [options]="modes" [(value)]="social.mode" />
+      <a routerLink="/" class="brand" aria-label="wannawatch? — início"><ww-logo [size]="24" [mark]="true" /></a>
+      <a wwButton variant="soft" size="sm" routerLink="/match">Dar match com a galera</a>
     </header>
 
     <p class="status" role="status">
@@ -23,6 +23,7 @@
         }
         @case ('error') {
           <div class="placeholder message" role="alert">
+            <ww-mascot [size]="112" />
             <h2>Não deu pra carregar os títulos</h2>
             <p>Confira se o back-end está rodando.</p>
             <button wwButton variant="primary" (click)="store.retry()">Tentar de novo</button>
@@ -31,6 +32,7 @@
         @default {
           @if (store.finished()) {
             <div class="placeholder message">
+              <ww-mascot [size]="112" />
               <h2>Você viu tudo!</h2>
               <p>Já passou por todos os títulos do catálogo.</p>
               <button wwButton variant="primary" (click)="store.reshuffle()">Embaralhar de novo</button>
@@ -46,16 +48,6 @@
         }
       }
 
-      @if (store.match(); as match) {
-        <div class="match" role="status">
-          <strong>Deu match na {{ social.group.name }}!</strong>
-          <span>Todo mundo quer ver {{ match.title }}.</span>
-          <div>
-            <a wwButton variant="primary" size="sm" [routerLink]="titleLink(match)">Ver detalhes</a>
-            <button wwButton variant="soft" size="sm" (click)="store.match.set(null)">Continuar</button>
-          </div>
-        </div>
-      }
     </div>
 
     <div class="actions" role="group" aria-label="Escolha">
@@ -92,8 +84,8 @@
         @if (c.overview) {
           <p class="overview">{{ c.overview }}</p>
         }
-        @if (social.isGroup()) {
-          <p class="friends">{{ social.friendsWhoWant(c.id) }} de {{ social.group.members }} da {{ social.group.name }} querem ver</p>
+        @if (currentLikedBy(); as likedBy) {
+          <p class="friends">{{ likedBy }}</p>
         }
         <a wwButton variant="outline" size="sm" [routerLink]="titleLink(c)">Mais informações</a>
       </section>
@@ -114,7 +106,7 @@
           }
         </ul>
       }
-      <p class="note">As escolhas ainda não são salvas: somem ao sair da tela.</p>
+      <p class="note">"Quero ver" fica salvo e aparece para os seus amigos. O resto some ao sair da tela.</p>
     </section>
 
     <section aria-labelledby="atalhos">

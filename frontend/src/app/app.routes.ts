@@ -1,6 +1,8 @@
 import { isDevMode } from '@angular/core';
 import { Routes } from '@angular/router';
+import { guestOnly, requireLogin } from './core/auth/auth-guard';
 import { RouteMeta } from './layout/route-meta';
+import { profileResolver } from './features/profile/profile-resolver';
 
 const placeholder = () =>
   import('./features/placeholder/placeholder-page').then((m) => m.PlaceholderPage);
@@ -8,8 +10,9 @@ const placeholder = () =>
 const feed = (theme: RouteMeta['theme'] = 'light'): RouteMeta => ({ shell: 'feed', theme });
 const cinema: RouteMeta = { shell: 'cinema', theme: 'dark' };
 
-export const routes: Routes = [
-  // --- Telas principais (por enquanto provisórias; cada uma chega na sua fase) ---
+/** Telas que exigem login (todas, menos /entrar). */
+const app: Routes = [
+  // --- Telas principais ---
   {
     path: '',
     title: 'wannawatch?',
@@ -27,6 +30,18 @@ export const routes: Routes = [
     title: 'Reels · wannawatch?',
     loadComponent: () => import('./features/reels/reels-page').then((m) => m.ReelsPage),
     data: feed('dark'),
+  },
+  {
+    path: 'match',
+    title: 'Match · wannawatch?',
+    loadComponent: () => import('./features/match/match-lobby-page').then((m) => m.MatchLobbyPage),
+    data: feed(),
+  },
+  {
+    path: 'match/:code',
+    title: 'Sala de Match · wannawatch?',
+    loadComponent: () => import('./features/match/match-room-page').then((m) => m.MatchRoomPage),
+    data: feed(),
   },
   {
     path: 'filme/:id',
@@ -64,19 +79,14 @@ export const routes: Routes = [
     path: 'minha-lista',
     title: 'Minha lista · wannawatch?',
     loadComponent: placeholder,
-    data: { ...feed(), heading: 'Minha lista', message: 'Quando tiver login, o que você salvar aparece aqui.', icon: 'list' },
-  },
-  {
-    path: 'grupos',
-    title: 'Grupos · wannawatch?',
-    loadComponent: placeholder,
-    data: { ...feed(), heading: 'Grupos', message: 'Criar grupo, chamar a galera e ver os matches: em breve.', icon: 'groups' },
+    data: { ...feed(), heading: 'Minha lista', message: 'O que você salvar aparece aqui. Em breve.', icon: 'list' },
   },
   {
     path: 'perfil',
     title: 'Perfil · wannawatch?',
-    loadComponent: placeholder,
-    data: { ...feed(), heading: 'Perfil', message: 'Login e perfil chegam numa próxima etapa.', icon: 'profile' },
+    loadComponent: () => import('./features/profile/profile-page').then((m) => m.ProfilePage),
+    resolve: { savedProfile: profileResolver },
+    data: feed(),
   },
   {
     path: 'sobre',
@@ -95,11 +105,21 @@ export const routes: Routes = [
         },
       ]
     : []),
+];
 
+export const routes: Routes = [
+  {
+    path: 'entrar',
+    title: 'Entrar · wannawatch?',
+    loadComponent: () => import('./features/login/login-page').then((m) => m.LoginPage),
+    canActivate: [guestOnly],
+    data: { shell: 'bare', theme: 'light' } satisfies RouteMeta,
+  },
+  { path: '', canActivateChild: [requireLogin], children: app },
   {
     path: '**',
     title: 'Não encontrado · wannawatch?',
     loadComponent: placeholder,
-    data: { ...feed(), heading: 'Ops, essa página não existe', message: 'Talvez o link tenha mudado.', icon: 'info' },
+    data: { ...feed(), heading: 'Ops, essa página não existe', message: 'Talvez o link tenha mudado.', mascot: true },
   },
 ];

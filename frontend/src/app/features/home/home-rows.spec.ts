@@ -1,52 +1,40 @@
-import { TestBed } from '@angular/core/testing';
-import { SocialMock } from '../../mocks/social.mock';
-import { homeResponse } from '../../../testing/fixtures';
-import { buildHomeRows, heroReason } from './home-rows';
+import { FriendsLiked } from '../../core/api/models';
+import { card, homeResponse } from '../../../testing/fixtures';
+import { buildHomeRows } from './home-rows';
+
+const bia = { id: 2, username: 'bia', displayName: 'Bia' };
+const caio = { id: 3, username: 'caio', displayName: 'Caio' };
+const friends: FriendsLiked[] = [
+  { title: card(90, { title: 'Curtido' }), likedByMe: false, friends: [bia, caio] },
+  { title: card(91), likedByMe: true, friends: [] },
+];
 
 describe('buildHomeRows', () => {
-  let social: SocialMock;
-  beforeEach(() => (social = TestBed.inject(SocialMock)));
-
-  it('põe continue assistindo, top 10 e match antes das fileiras da API', () => {
-    const rows = buildHomeRows(homeResponse(), social);
-    expect(rows.map((r) => r.kind)).toEqual(['CONTINUE', 'TOP10', 'MATCH', 'SIMILAR', 'BINGE']);
+  it('põe top 10 e "Seus amigos curtiram" antes das fileiras da API', () => {
+    const rows = buildHomeRows(homeResponse(), friends);
+    expect(rows.map((r) => r.kind)).toEqual(['TOP10', 'FRIENDS', 'SIMILAR', 'BINGE']);
+    expect(rows[1].title).toBe('Seus amigos curtiram');
   });
 
-  it('não usa o destaque nem repete título nas fileiras de mentira', () => {
-    const rows = buildHomeRows(homeResponse(), social);
-    const mockIds = rows
-      .filter((r) => r.kind === 'CONTINUE' || r.kind === 'MATCH')
-      .flatMap((r) => (r.kind === 'TOP10' ? [] : r.items.map((i) => i.card.id)));
-    expect(mockIds).not.toContain(1);
-    expect(new Set(mockIds).size).toBe(mockIds.length);
+  it('diz quem curtiu embaixo de cada card dos amigos', () => {
+    const row = buildHomeRows(homeResponse(), friends).find((r) => r.kind === 'FRIENDS')!;
+    expect(row.kind !== 'TOP10' && row.items.map((i) => i.sub)).toEqual([
+      'Bia e Caio curtiram',
+      'Filme · Ficção científica · 2h10',
+    ]);
   });
 
-  it('ordena o match pelo % e troca o texto no modo solo', () => {
-    const group = buildHomeRows(homeResponse(), social).find((r) => r.kind === 'MATCH')!;
-    expect(group.title).toBe('Deu match na Sexta do cinema');
-    const pcts = group.kind === 'TOP10' ? [] : group.items.map((i) => parseInt(i.badge!, 10));
-    expect(pcts).toEqual([...pcts].sort((a, b) => b - a));
-    expect(group.kind !== 'TOP10' && group.items[0].sub).toMatch(/^\d de 4 querem ver$/);
-
-    social.mode.set('solo');
-    const solo = buildHomeRows(homeResponse(), social).find((r) => r.kind === 'MATCH')!;
-    expect(solo.title).toBe('Na sua lista de talvez');
+  it('sem curtidas dos amigos, a fileira some', () => {
+    const rows = buildHomeRows(homeResponse(), []);
+    expect(rows.map((r) => r.kind)).not.toContain('FRIENDS');
   });
 
   it('mostra tipo, gênero e duração embaixo dos cards da API', () => {
-    const similar = buildHomeRows(homeResponse(), social).find((r) => r.kind === 'SIMILAR')!;
+    const similar = buildHomeRows(homeResponse(), []).find((r) => r.kind === 'SIMILAR')!;
     expect(similar.kind !== 'TOP10' && similar.items[0].sub).toBe('Filme · Ficção científica · 2h10');
   });
 
   it('some com fileiras vazias', () => {
-    const rows = buildHomeRows(homeResponse({ hero: null, rows: [] }), social);
-    expect(rows).toEqual([]);
-  });
-
-  it('explica o destaque pelo grupo ou pelo gênero', () => {
-    const hero = homeResponse().hero!;
-    expect(heroReason(hero, social)).toMatch(/^\d de 4 amigos da Sexta do cinema querem ver$/);
-    social.mode.set('solo');
-    expect(heroReason(hero, social)).toBe('Porque você curte ficção científica');
+    expect(buildHomeRows(homeResponse({ hero: null, rows: [] }), [])).toEqual([]);
   });
 });

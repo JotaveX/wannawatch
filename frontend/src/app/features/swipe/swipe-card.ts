@@ -12,10 +12,9 @@ import { RouterLink } from '@angular/router';
 import { TitleCard } from '../../core/api/models';
 import { metaLine } from '../../core/format';
 import { titleLink } from '../../core/title-link';
-import { SocialMock } from '../../mocks/social.mock';
+import { LikesStore, likedByLabel } from '../../core/social/likes-store';
 import { Icon } from '../../shared/ui/icon';
 import { IconButton } from '../../shared/ui/icon-button';
-import { MatchBadge } from '../../shared/ui/match-badge';
 import { Poster } from '../../shared/ui/poster';
 import { Decision } from './swipe-store';
 
@@ -24,9 +23,12 @@ export const THRESHOLD_X = 100;
 export const THRESHOLD_Y = 110;
 const FLY_MS = 260;
 
-/** Para onde o arrasto aponta, ou null se ainda não passou do limite. */
-export function dragDecision(dx: number, dy: number): Decision | null {
-  if (Math.abs(dx) >= Math.abs(dy)) {
+/**
+ * Para onde o arrasto aponta, ou null se ainda não passou do limite.
+ * Sem `vertical` (Match), só vale para os lados.
+ */
+export function dragDecision(dx: number, dy: number, vertical = true): Decision | null {
+  if (!vertical || Math.abs(dx) >= Math.abs(dy)) {
     if (dx >= THRESHOLD_X) return 'like';
     if (dx <= -THRESHOLD_X) return 'pass';
   } else {
@@ -49,7 +51,7 @@ const OUT: Record<Decision, [number, number, number]> = {
  */
 @Component({
   selector: 'ww-swipe-card',
-  imports: [RouterLink, Icon, IconButton, MatchBadge, Poster],
+  imports: [RouterLink, Icon, IconButton, Poster],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
     '[class.top]': 'interactive()',
@@ -67,7 +69,9 @@ const OUT: Record<Decision, [number, number, number]> = {
       <div class="media">
         <ww-poster ratio="fill" [image]="card().poster" [widths]="[342, 780]" sizes="420px"
                    [seed]="card().id" [title]="card().title" [eager]="true" />
-        <ww-match-badge class="badge" [percent]="social.matchPercent(card().id)" />
+        @if (likedBy(); as likedBy) {
+          <span class="badge">{{ likedBy }}</span>
+        }
         @if (interactive()) {
           <a wwIconButton variant="light" class="info" [routerLink]="link()"
              [label]="'Mais informações sobre ' + card().title">
@@ -94,9 +98,13 @@ export class SwipeCard {
   readonly card = input.required<TitleCard>();
   /** só a carta de cima arrasta e tem link */
   readonly interactive = input(false);
+  /** false = só esquerda/direita (no Match não tem "talvez" nem "já vi") */
+  readonly vertical = input(true);
   readonly decided = output<Decision>();
 
-  protected readonly social = inject(SocialMock);
+  private readonly likes = inject(LikesStore);
+  /** "Bia curtiu" */
+  protected readonly likedBy = computed(() => likedByLabel(this.likes.friends(this.card().id)));
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
 
   protected readonly dx = signal(0);
@@ -116,7 +124,7 @@ export class SwipeCard {
       return `translate(${x * 100}vw, ${y * 100}vh) rotate(${r}deg)`;
     }
     const dx = this.dx();
-    const dy = this.dy();
+    const dy = this.vertical() ? this.dy() : 0;
     return dx || dy ? `translate(${dx}px, ${dy}px) rotate(${dx / 18}deg)` : null;
   });
 
@@ -126,7 +134,7 @@ export class SwipeCard {
     if (leaving) return { like: 0, pass: 0, maybe: 0, seen: 0, [leaving]: 1 };
     const dx = this.dx();
     const dy = this.dy();
-    const horizontal = Math.abs(dx) >= Math.abs(dy);
+    const horizontal = !this.vertical() || Math.abs(dx) >= Math.abs(dy);
     const clamp = (v: number) => Math.max(0, Math.min(1, v));
     return {
       like: horizontal ? clamp(dx / THRESHOLD_X) : 0,
@@ -162,7 +170,7 @@ export class SwipeCard {
 
   protected onUp(): void {
     if (!this.start) return;
-    const decision = dragDecision(this.dx(), this.dy());
+    const decision = dragDecision(this.dx(), this.dy(), this.vertical());
     this.start = null;
     if (decision) this.fling(decision);
     else this.reset();

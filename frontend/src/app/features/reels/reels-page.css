@@ -81,7 +81,7 @@
 
 @media (min-width: 1024px) {
   .layout {
-    height: 100dvh;
+    height: var(--ww-view-h);
     align-items: center;
     gap: var(--ww-space-6);
     padding: var(--ww-space-4) var(--ww-space-8);

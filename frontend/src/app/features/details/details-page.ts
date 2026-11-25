@@ -9,7 +9,7 @@ import { MediaType, TitleDetail } from '../../core/api/models';
 import { length, metaLine, typeLabel } from '../../core/format';
 import { titleLink } from '../../core/title-link';
 import { TopNav } from '../../layout/top-nav';
-import { SocialMock } from '../../mocks/social.mock';
+import { LikesStore, likedByLabel } from '../../core/social/likes-store';
 import { Button } from '../../shared/ui/button';
 import { Icon } from '../../shared/ui/icon';
 import { AppMark } from '../../shared/ui/logo';
@@ -41,7 +41,7 @@ export class DetailsPage {
   private readonly api = inject(CatalogApi);
   private readonly router = inject(Router);
   private readonly pageTitle = inject(Title);
-  protected readonly social = inject(SocialMock);
+  private readonly likes = inject(LikesStore);
   protected readonly retry = signal(0);
 
   protected readonly state = signal<State>({ status: 'loading' });
@@ -65,6 +65,11 @@ export class DetailsPage {
     (this.detail()?.similar ?? []).map((card) => ({ card, sub: metaLine(card) })),
   );
   protected readonly initials = initials;
+  /** "Bia e Caio curtiram" */
+  protected readonly likedBy = computed(() => {
+    const d = this.detail();
+    return d ? likedByLabel(this.likes.friends(d.id)) : null;
+  });
 
   constructor() {
     const request = computed(() => ({ id: Number(this.id()), retry: this.retry() }));
@@ -88,6 +93,7 @@ export class DetailsPage {
           return;
         }
         this.state.set(state);
+        if (state.status === 'ok') this.likes.ensure([state.detail.id]);
         if (state.status === 'ok') this.pageTitle.setTitle(`${state.detail.title} · wannawatch?`);
         if (state.status === 'notfound') this.pageTitle.setTitle('Não encontrado · wannawatch?');
       });

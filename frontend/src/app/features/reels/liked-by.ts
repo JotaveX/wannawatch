@@ -1,24 +1,25 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
-import { Friend, SocialMock } from '../../mocks/social.mock';
+import { UserRef } from '../../core/api/models';
+import { LikesStore, likedByLabel } from '../../core/social/likes-store';
+import { Avatar } from '../../shared/ui/avatar';
 import { Icon } from '../../shared/ui/icon';
 
 /**
- * Esferas flutuantes com os amigos que também curtiram (mock), no canto inferior esquerdo do reel.
+ * Esferas flutuantes com os amigos que curtiram, no canto inferior esquerdo do reel.
  * Balançam devagar, cada uma num tempo; param com "reduzir movimento".
  */
 @Component({
   selector: 'ww-liked-by',
-  imports: [Icon],
+  imports: [Avatar, Icon],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { '[class.none]': '!friends().length' },
   template: `
     @if (friends().length) {
       <span class="spheres" aria-hidden="true">
-        @for (f of friends(); track f.name; let i = $index) {
-          <span class="sphere" [style.background]="f.bg" [style.color]="f.fg" [style.animation-delay]="i * -0.9 + 's'">
-            {{ f.initials }}
+        @for (f of shown(); track f.id; let i = $index) {
+          <ww-avatar class="sphere" [user]="f" [size]="40" [style.animation-delay]="i * -0.9 + 's'">
             <span class="heart"><ww-icon name="heart-filled" [size]="9" [stroke]="0" /></span>
-          </span>
+          </ww-avatar>
         }
       </span>
       <span class="label">{{ label() }}</span>
@@ -38,18 +39,8 @@ import { Icon } from '../../shared/ui/icon';
       display: flex;
     }
     .sphere {
-      position: relative;
-      display: grid;
-      place-items: center;
-      width: 40px;
-      height: 40px;
       margin-right: -8px;
       border: 2px solid var(--ww-bg-dark);
-      border-radius: 50%;
-      font-family: var(--ww-font-display);
-      font-weight: 700;
-      font-size: 13px;
-      letter-spacing: -0.02em;
       animation: float 2.8s ease-in-out infinite;
     }
     .heart {
@@ -88,7 +79,9 @@ import { Icon } from '../../shared/ui/icon';
 })
 export class LikedBy {
   readonly titleId = input.required<number>();
-  private readonly social = inject(SocialMock);
-  protected readonly friends = computed<Friend[]>(() => this.social.friendsWhoLiked(this.titleId()));
-  protected readonly label = computed(() => this.social.likedByLabel(this.friends()));
+  private readonly likes = inject(LikesStore);
+  protected readonly friends = computed<UserRef[]>(() => this.likes.friends(this.titleId()));
+  /** no máximo 3 esferas; o texto conta o resto */
+  protected readonly shown = computed(() => this.friends().slice(0, 3));
+  protected readonly label = computed(() => likedByLabel(this.friends()));
 }

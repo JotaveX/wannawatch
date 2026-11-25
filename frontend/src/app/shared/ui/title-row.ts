@@ -44,6 +44,9 @@ import { Icon } from './icon';
       display: flex;
       gap: var(--ww-space-2);
       overflow-x: auto;
+      /* fileira só rola na horizontal: o número gigante do Top 10 (line-height < 1)
+         vaza a caixa de texto pra baixo e criava rolagem vertical aqui dentro */
+      overflow-y: hidden;
       scroll-snap-type: x mandatory;
       scroll-padding: 0 var(--ww-page-x);
       padding: 4px var(--ww-page-x);
@@ -70,7 +73,17 @@ import { Icon } from './icon';
         color: var(--ww-white);
         cursor: pointer;
         transform: translateY(-50%);
-        transition: opacity var(--ww-fast) var(--ww-ease);
+        transition:
+          opacity var(--ww-medium) var(--ww-ease-out),
+          transform var(--ww-medium) var(--ww-ease-spring),
+          background-color var(--ww-medium) var(--ww-ease-out);
+      }
+      .arrow:hover {
+        background: var(--ww-graphite);
+        transform: translateY(-50%) scale(1.08);
+      }
+      .arrow:active {
+        transform: translateY(-50%) scale(0.94);
       }
       .prev {
         left: 8px;
