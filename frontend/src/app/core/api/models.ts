@@ -160,16 +160,31 @@ export interface UserRef {
 
 export interface ProfileStats {
   likes: number;
+  /** salas de Match que terminaram em match */
   matches: number;
+  /** salas de Match em que entrou */
+  rooms: number;
+  /** votos dados nas salas de Match */
+  votes: number;
 }
 
 /** GET/PUT /api/me/profile */
 export interface Profile {
   user: UserRef;
   email: string | null;
+  /** ISO, quando a conta foi criada */
+  memberSince: string;
   favoriteGenre: GenreRef | null;
   favoriteTitle: TitleCard | null;
   stats: ProfileStats;
+}
+
+/** GET /api/me/profile/activity */
+export interface ProfileActivity {
+  /** curtidas por semana, da mais antiga (12 semanas atrás) para a atual */
+  weeklyLikes: number[];
+  /** últimos curtidos, do mais novo para o mais antigo */
+  recentLikes: TitleCard[];
 }
 
 export interface ProfileUpdate {

@@ -408,8 +408,27 @@ class SocialApiIntegrationTest {
                     .andExpect(jsonPath("$.email").value("jotave@exemplo.com"))
                     .andExpect(jsonPath("$.favoriteGenre").value(nullValue()))
                     .andExpect(jsonPath("$.favoriteTitle").value(nullValue()))
+                    .andExpect(jsonPath("$.memberSince").isString())
                     .andExpect(jsonPath("$.stats.likes").value(2))
-                    .andExpect(jsonPath("$.stats.matches").value(0));
+                    .andExpect(jsonPath("$.stats.matches").value(0))
+                    .andExpect(jsonPath("$.stats.rooms").value(0))
+                    .andExpect(jsonPath("$.stats.votes").value(0));
+        }
+
+        @Test
+        void atividadeContaCurtidasPorSemanaEMostraAsRecentes() throws Exception {
+            like(jotave, m1);
+            like(jotave, m2);
+            like(jotave, s1);
+            // m2 foi curtido há 3 semanas e meia; s1 há 20 semanas (fora do gráfico)
+            jdbc.sql("UPDATE title_like SET created_at = now() - interval '25 days' WHERE title_id = :t").param("t", m2).update();
+            jdbc.sql("UPDATE title_like SET created_at = now() - interval '140 days' WHERE title_id = :t").param("t", s1).update();
+            mvc.perform(get("/api/me/profile/activity").header("Authorization", "Bearer " + jotave))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.weeklyLikes", hasSize(12)))
+                    .andExpect(jsonPath("$.weeklyLikes[11]").value(1))
+                    .andExpect(jsonPath("$.weeklyLikes[8]").value(1))
+                    .andExpect(jsonPath("$.recentLikes[*].title", contains("Filme Um", "Filme Dois", "Série Um")));
         }
 
         @Test

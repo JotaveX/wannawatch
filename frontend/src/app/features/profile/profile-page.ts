@@ -1,108 +1,71 @@
-import { HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, computed, DestroyRef, inject, signal } from '@angular/core';
-import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
-import { ActivatedRoute, Router } from '@angular/router';
-import { catchError, map, of } from 'rxjs';
-import { CatalogApi } from '../../core/api/catalog-api';
-import { Profile, TitleCard, UserRef } from '../../core/api/models';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { ActivatedRoute, RouterLink } from '@angular/router';
+import { Profile, ProfileActivity } from '../../core/api/models';
 import { SocialApi } from '../../core/api/social-api';
-import { AuthStore } from '../../core/auth/auth-store';
-import { PhotoError, PhotoStore } from '../../core/social/photo-store';
-import { USER_COLORS } from '../../core/social/user-colors';
+import { userColors } from '../../core/social/user-colors';
+import { titleLink } from '../../core/title-link';
 import { Avatar } from '../../shared/ui/avatar';
 import { Button } from '../../shared/ui/button';
 import { Icon } from '../../shared/ui/icon';
-import { FavoriteTitlePicker } from './favorite-title-picker';
-import { BU_MASCOTS } from '../../shared/ui/mascots';
-
-/** O que aparece no lugar do avatar: iniciais, uma pose do Bu (índice) ou a foto enviada. */
-type AvatarChoice = 'initials' | 'photo' | number;
-
-const NAME_MAX = 40;
+import { buMascot } from '../../shared/ui/mascots';
+import { Poster } from '../../shared/ui/poster';
 
 /**
- * Perfil: nome, cor, avatar (Bu ou foto), gênero e título favoritos, e a conta.
- * O formulário é um rascunho: o cabeçalho do card mostra a prévia e "Salvar" só acende com mudança.
+ * Página de perfil (só leitura): quem é você no wannawatch?, seus números, curtidas por semana
+ * e os últimos curtidos. Para editar, "Editar perfil" leva aos Ajustes.
  */
 @Component({
   selector: 'ww-profile-page',
-  imports: [Avatar, Button, Icon, FavoriteTitlePicker],
+  imports: [RouterLink, Avatar, Button, Icon, Poster],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './profile-page.html',
   styleUrl: './profile-page.css',
 })
 export class ProfilePage {
   private readonly api = inject(SocialApi);
-  private readonly catalog = inject(CatalogApi);
-  private readonly auth = inject(AuthStore);
-  private readonly photos = inject(PhotoStore);
-  private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
   private readonly destroyRef = inject(DestroyRef);
 
-  protected readonly colors = USER_COLORS;
-  protected readonly mascots = BU_MASCOTS;
-  protected readonly nameMax = NAME_MAX;
+  protected readonly titleLink = titleLink;
+  /** Bu do estado vazio dos curtidos */
+  protected readonly emptyBu = buMascot(7);
+  /** no celular o avatar encolhe para o nome caber ao lado */
+  protected readonly avatarSize = globalThis.matchMedia?.('(max-width: 479px)').matches ? 88 : 120;
 
   protected readonly profile = signal<Profile | null>(null);
   protected readonly loadError = signal(false);
+  protected readonly activity = signal<ProfileActivity | null>(null);
+  protected readonly activityError = signal(false);
 
-  // --- rascunho ---
-  protected readonly name = signal('');
-  protected readonly color = signal(0);
-  protected readonly avatar = signal<AvatarChoice>('initials');
-  protected readonly photo = signal<string | null>(null);
-  protected readonly genreId = signal<number | null>(null);
-  protected readonly favorite = signal<TitleCard | null>(null);
-
-  protected readonly saving = signal(false);
-  protected readonly status = signal<{ kind: 'ok' | 'error'; text: string } | null>(null);
-  protected readonly photoError = signal<string | null>(null);
-
-  protected readonly genres = toSignal(
-    this.catalog.genres().pipe(
-      map((all) => all.filter((g) => g.titleCount > 0).sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'))),
-      catchError(() => of([])),
-    ),
-    { initialValue: [] },
-  );
-
-  /** O usuário como vai ficar: alimenta a prévia do cabeçalho. */
-  protected readonly preview = computed<UserRef | null>(() => {
+  protected readonly since = computed(() => {
     const p = this.profile();
-    if (!p) return null;
-    return { ...p.user, displayName: this.cleanName() || p.user.displayName, color: this.color(), mascot: this.mascotToSave() };
-  });
-  protected readonly previewPhoto = computed(() => (this.avatar() === 'photo' ? this.photo() : null));
-
-  private readonly cleanName = computed(() => this.name().trim().replace(/\s+/g, ' '));
-  /** Com foto, o Bu salvo continua valendo para os amigos (a foto ainda é só deste aparelho). */
-  private readonly mascotToSave = computed(() => {
-    const a = this.avatar();
-    return typeof a === 'number' ? a : a === 'photo' ? (this.profile()?.user.mascot ?? null) : null;
+    return p ? shortDate(p.memberSince) : null;
   });
 
-  protected readonly nameError = computed(() => (this.cleanName() ? null : 'Seu nome não pode ficar vazio.'));
-
-  protected readonly dirty = computed(() => {
+  /** Cor da pessoa: pinta as semanas com curtidas. */
+  protected readonly accent = computed(() => {
     const p = this.profile();
-    if (!p) return false;
-    const savedPhoto = this.photos.photo(p.user.id);
-    return (
-      this.cleanName() !== p.user.displayName ||
-      this.color() !== (p.user.color ?? 0) ||
-      this.avatar() !== initialAvatar(p.user, savedPhoto) ||
-      (this.avatar() === 'photo' && this.photo() !== savedPhoto) ||
-      this.genreId() !== (p.favoriteGenre?.id ?? null) ||
-      this.favorite()?.id !== p.favoriteTitle?.id
-    );
+    return p ? userColors(p.user).bg : null;
   });
+
+  /** 12 semanas; enquanto carrega, 12 vazias. `level` vai de 0 (nada) a 4 (a semana mais cheia). */
+  protected readonly weeks = computed(() => {
+    const counts = this.activity()?.weeklyLikes ?? Array<number>(12).fill(0);
+    const max = Math.max(1, ...counts);
+    return counts.map((count, i) => ({
+      count,
+      level: count === 0 ? 0 : Math.max(1, Math.ceil((count / max) * 4)),
+      label: weekLabel(counts.length - 1 - i, count),
+    }));
+  });
+  protected readonly likesInWeeks = computed(() => this.weeks().reduce((sum, w) => sum + w.count, 0));
 
   constructor() {
-    // o resolver da rota já trouxe o perfil (ver profile-resolver.ts); sem ele, busca aqui
     const resolved = this.route.snapshot.data['savedProfile'] as Profile | null | undefined;
-    if (resolved) this.reset(resolved);
+    if (resolved) this.profile.set(resolved);
     else this.load();
+    this.loadActivity();
   }
 
   protected load(): void {
@@ -110,82 +73,30 @@ export class ProfilePage {
     this.api
       .profile()
       .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({ next: (p) => this.reset(p), error: () => this.loadError.set(true) });
+      .subscribe({ next: (p) => this.profile.set(p), error: () => this.loadError.set(true) });
   }
 
-  /** Volta o rascunho para o que está salvo. */
-  protected reset(p = this.profile()): void {
-    if (!p) return;
-    const savedPhoto = this.photos.photo(p.user.id);
-    this.profile.set(p);
-    this.name.set(p.user.displayName);
-    this.color.set(p.user.color ?? 0);
-    this.avatar.set(initialAvatar(p.user, savedPhoto));
-    this.photo.set(savedPhoto);
-    this.genreId.set(p.favoriteGenre?.id ?? null);
-    this.favorite.set(p.favoriteTitle);
-    this.photoError.set(null);
-  }
-
-  protected setGenre(value: string): void {
-    this.genreId.set(value ? Number(value) : null);
-  }
-
-  // --- foto (mock) ---
-
-  protected async pickPhoto(input: HTMLInputElement): Promise<void> {
-    const file = input.files?.[0];
-    input.value = '';
-    if (!file) return;
-    this.photoError.set(null);
-    try {
-      this.photo.set(await this.photos.prepare(file));
-      this.avatar.set('photo');
-    } catch (e) {
-      this.photoError.set(e instanceof PhotoError ? e.message : 'Não deu pra usar essa imagem.');
-    }
-  }
-
-  // --- salvar / sair ---
-
-  protected save(event: Event): void {
-    event.preventDefault();
-    const p = this.profile();
-    if (!p || this.saving() || !this.dirty() || this.nameError()) return;
-    this.saving.set(true);
-    this.status.set(null);
+  protected loadActivity(): void {
+    this.activityError.set(false);
     this.api
-      .updateProfile({
-        displayName: this.cleanName(),
-        color: this.color(),
-        mascot: this.mascotToSave(),
-        favoriteGenreId: this.genreId(),
-        favoriteTitleId: this.favorite()?.id ?? null,
-      })
+      .profileActivity()
       .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: (saved) => {
-          this.photos.save(saved.user.id, this.avatar() === 'photo' ? this.photo() : null);
-          this.auth.updateUser(saved.user);
-          this.reset(saved);
-          this.saving.set(false);
-          this.status.set({ kind: 'ok', text: 'Perfil salvo.' });
-        },
-        error: (e: HttpErrorResponse) => {
-          this.saving.set(false);
-          const detail = typeof e.error?.detail === 'string' ? e.error.detail : null;
-          this.status.set({ kind: 'error', text: detail ?? 'Não deu pra salvar agora. Tenta de novo?' });
-        },
-      });
-  }
-
-  protected logout(): void {
-    this.auth.logout();
-    this.router.navigate(['/entrar']);
+      .subscribe({ next: (a) => this.activity.set(a), error: () => this.activityError.set(true) });
   }
 }
 
-function initialAvatar(user: UserRef, savedPhoto: string | null): AvatarChoice {
-  if (savedPhoto) return 'photo';
-  return user.mascot ?? 'initials';
+/** "2026-11-25T…" → "25 de nov" (com o ano, se não for este). */
+function shortDate(iso: string): string | null {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return null;
+  const sameYear = date.getFullYear() === new Date().getFullYear();
+  return date
+    .toLocaleDateString('pt-BR', { day: 'numeric', month: 'short', ...(sameYear ? {} : { year: 'numeric' }) })
+    .replace(/\./g, '');
+}
+
+function weekLabel(ago: number, count: number): string {
+  const when = ago === 0 ? 'Esta semana' : ago === 1 ? 'Semana passada' : `${ago} semanas atrás`;
+  const what = count === 0 ? 'nenhuma curtida' : count === 1 ? '1 curtida' : `${count} curtidas`;
+  return `${when}: ${what}`;
 }

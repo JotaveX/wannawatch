@@ -8,6 +8,7 @@ import {
   LoginResponse,
   MediaType,
   Profile,
+  ProfileActivity,
   ProfileUpdate,
   Room,
   TitleCard,
@@ -37,6 +38,10 @@ export class SocialApi {
 
   profile(): Observable<Profile> {
     return this.http.get<Profile>(`${this.base}/me/profile`);
+  }
+
+  profileActivity(): Observable<ProfileActivity> {
+    return this.http.get<ProfileActivity>(`${this.base}/me/profile/activity`);
   }
 
   updateProfile(changes: ProfileUpdate): Observable<Profile> {

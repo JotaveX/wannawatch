@@ -90,6 +90,13 @@ const app: Routes = [
     data: feed(),
   },
   {
+    path: 'ajustes',
+    title: 'Ajustes · wannawatch?',
+    loadComponent: () => import('./features/settings/settings-page').then((m) => m.SettingsPage),
+    resolve: { savedProfile: profileResolver },
+    data: feed(),
+  },
+  {
     path: 'sobre',
     title: 'Sobre e créditos · wannawatch?',
     loadComponent: () => import('./features/about/about-page').then((m) => m.AboutPage),

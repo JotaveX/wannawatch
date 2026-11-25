@@ -177,7 +177,8 @@ lateral. Os dados de "onde assistir" vêm da JustWatch, creditada em `/sobre` e 
 | `/reels` | Reels | escuro |
 | `/match`, `/match/:code` | Match: salas abertas e criar sala · sala de espera e votação | claro |
 | `/entrar` | Login (sem navegação) | claro |
-| `/perfil` | Quem está logado e sair | claro |
+| `/perfil` | Seu perfil: números, curtidas por semana e últimos curtidos | claro |
+| `/ajustes` | Nome, cor, Bu, favoritos, conta e sair | claro |
 | `/sobre` | Sobre e créditos | claro |
 | `/series`, `/filmes`, `/minha-lista` | Provisórias ("em breve") | claro |
 | `/dev/componentes` | Vitrine de componentes (só em dev) | claro e escuro |

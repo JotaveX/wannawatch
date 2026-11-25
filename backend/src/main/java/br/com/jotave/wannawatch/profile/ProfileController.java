@@ -1,6 +1,7 @@
 package br.com.jotave.wannawatch.profile;
 
 import br.com.jotave.wannawatch.auth.AuthUser;
+import br.com.jotave.wannawatch.profile.ProfileService.Activity;
 import br.com.jotave.wannawatch.profile.ProfileService.Changes;
 import br.com.jotave.wannawatch.profile.ProfileService.Profile;
 import io.swagger.v3.oas.annotations.Operation;
@@ -40,6 +41,12 @@ public class ProfileController {
     @Operation(summary = "Meu perfil, com gênero e título favoritos e meus números")
     public Profile get(@Parameter(hidden = true) AuthUser user) {
         return profiles.get(user);
+    }
+
+    @GetMapping("/activity")
+    @Operation(summary = "Curtidas por semana (últimas 12) e os últimos curtidos, para a página de perfil")
+    public Activity activity(@Parameter(hidden = true) AuthUser user) {
+        return profiles.activity(user);
     }
 
     @PutMapping

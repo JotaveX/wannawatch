@@ -45,21 +45,24 @@ import { SIDE_ITEMS } from './nav-items';
       }
     </nav>
 
-    @if (auth.user(); as user) {
-      <section class="me" aria-label="Sua conta">
-        <ww-avatar [user]="user" [size]="36" />
-        <div>
-          <strong>{{ user.displayName }}</strong>
-          <span>&#64;{{ user.username }}</span>
-        </div>
-        <button type="button" (click)="logout()">Sair</button>
-      </section>
-    }
-
     <div class="credits">
       <a routerLink="/sobre">Sobre e créditos</a>
       <span>Dados de filmes e séries: TMDB</span>
     </div>
+
+    @if (auth.user(); as user) {
+      <section class="account" aria-label="Sua conta">
+        <a class="me" routerLink="/perfil" routerLinkActive="active" ariaCurrentWhenActive="page"
+           [attr.aria-label]="'Seu perfil: ' + user.displayName">
+          <ww-avatar [user]="user" [size]="32" />
+          <span class="me-name">{{ user.displayName }}</span>
+        </a>
+        <button type="button" class="logout" (click)="logout()">
+          <ww-icon name="logout" [size]="20" />
+          Sair
+        </button>
+      </section>
+    }
   `,
   styles: `
     :host {
@@ -158,45 +161,67 @@ import { SIDE_ITEMS } from './nav-items';
       bottom: calc(-1 * var(--tab-r));
       background: radial-gradient(circle at 0 100%, transparent var(--tab-r), var(--panel) calc(var(--tab-r) + 0.5px));
     }
-    .me {
+    /* conta, no pé da barra: o perfil (cartão) e o Sair logo abaixo */
+    .account {
+      display: flex;
+      flex-direction: column;
+      gap: var(--ww-space-1);
+      margin-right: var(--ww-space-4);
+    }
+    .me,
+    .logout {
       display: flex;
       align-items: center;
       gap: var(--ww-space-3);
-      margin-right: var(--ww-space-4);
-      padding: var(--ww-space-3);
-      border: var(--ww-hairline) solid var(--border);
+      min-height: var(--ww-touch);
+      padding: 0 var(--ww-space-3);
       border-radius: var(--ww-radius-md);
+      font-size: 15px;
+      text-decoration: none;
+      transition:
+        background-color var(--ww-medium) var(--ww-ease-out),
+        box-shadow var(--ww-medium) var(--ww-ease-out),
+        color var(--ww-medium) var(--ww-ease-out);
+    }
+    .me {
+      min-height: 52px;
+      padding-left: var(--ww-space-2);
       background: var(--panel);
-      transition: box-shadow var(--ww-medium) var(--ww-ease-out);
+      color: var(--text);
+      font-weight: 500;
     }
     .me:hover {
       box-shadow: var(--ww-shadow-soft);
     }
-    .me div {
-      flex-grow: 1;
-      min-width: 0;
-      display: flex;
-      flex-direction: column;
-      font-size: 13px;
-    }
-    .me span {
-      color: var(--text-2);
-    }
-    .me button {
-      min-height: var(--ww-touch);
-      padding: 0 var(--ww-space-2);
-      border: 0;
-      border-radius: var(--ww-radius-sm);
-      background: none;
+    .me.active {
       color: var(--link);
-      font: inherit;
-      font-size: 13px;
       font-weight: 600;
-      cursor: pointer;
-      transition: background-color var(--ww-medium) var(--ww-ease-out);
     }
-    .me button:hover {
+    .me-name {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .logout {
+      width: 100%;
+      border: 0;
+      background: none;
+      color: var(--text-2);
+      font: inherit;
+      font-size: 15px;
+      font-weight: 500;
+      cursor: pointer;
+    }
+    .logout:hover {
       background: var(--hover);
+      color: var(--text);
+    }
+    .logout ww-icon {
+      transition: transform var(--ww-medium) var(--ww-ease-spring);
+    }
+    .logout:hover ww-icon {
+      transform: translateX(2px);
     }
     .credits {
       margin-top: auto;

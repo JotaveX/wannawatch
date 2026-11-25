@@ -6,8 +6,8 @@ import { userColors } from '../../core/social/user-colors';
 import { BU_MASCOTS } from './mascots';
 
 /**
- * Avatar de um usuário: a foto (se enviou neste aparelho), senão o Bu que escolheu,
- * senão as iniciais na cor dele. `photo` força uma foto (prévia no perfil).
+ * Avatar de um usuário: a foto (se enviou neste aparelho), senão o Bu que escolheu sobre a
+ * cor dele, senão as iniciais na cor dele. `photo` força uma foto (prévia no perfil).
  * Decorativo: quem usa diz o nome por perto (texto ou aria-label).
  */
 @Component({
@@ -66,7 +66,11 @@ export class Avatar {
   protected readonly image = computed(() => {
     const preview = this.photo();
     const photo = preview === undefined ? this.photos.photo(this.user().id) : preview;
-    return photo ?? this.mascot()?.src ?? null;
+    return photo ?? this.mascot()?.avatar ?? null;
   });
-  protected readonly background = computed(() => (this.image() ? (this.mascot()?.color ?? 'transparent') : this.colors().bg));
+  private readonly hasPhoto = computed(() => {
+    const preview = this.photo();
+    return !!(preview === undefined ? this.photos.photo(this.user().id) : preview);
+  });
+  protected readonly background = computed(() => (this.hasPhoto() ? 'transparent' : this.colors().bg));
 }

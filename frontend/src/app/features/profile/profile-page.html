@@ -1,173 +1,116 @@
-<header class="intro">
-  <h1 id="perfil">Perfil</h1>
-  <p>Como a galera te vê no wannawatch? e o que você ama assistir.</p>
-</header>
-
 @if (profile(); as p) {
-  <form class="ww-stagger" (submit)="save($event)" novalidate aria-labelledby="perfil">
-    <section aria-labelledby="sec-perfil">
-      <h2 id="sec-perfil" class="section-label">Perfil</h2>
+  <div class="page ww-stagger">
+    <header class="hero">
+      <div class="ring">
+        <ww-avatar [user]="p.user" [size]="avatarSize" />
+      </div>
+      <div class="who">
+        <h1>{{ p.user.displayName }}</h1>
+        <p class="meta">
+          &#64;{{ p.user.username }}
+          @if (since(); as date) {
+            <span aria-hidden="true">·</span> no wannawatch? desde {{ date }}
+          }
+        </p>
+        <p class="bio">
+          @if (p.favoriteGenre || p.favoriteTitle) {
+            @if (p.favoriteGenre; as g) {
+              Ama {{ g.name.toLowerCase() }}
+            }
+            @if (p.favoriteGenre && p.favoriteTitle) {
+              <span aria-hidden="true">·</span>
+            }
+            @if (p.favoriteTitle; as t) {
+              {{ p.favoriteGenre ? 'favorito' : 'Favorito' }} de todos os tempos:
+              <a [routerLink]="titleLink(t)">{{ t.title }}</a>
+            }
+          } @else {
+            <span class="muted">Conte pra galera o que você ama assistir: escolha um gênero e um favorito nos ajustes.</span>
+          }
+        </p>
+      </div>
+      <a wwButton variant="soft" size="sm" class="edit" routerLink="/ajustes">
+        <ww-icon name="edit" [size]="16" />
+        Editar perfil
+      </a>
+    </header>
+
+    <div class="cards">
+      <section class="card" aria-labelledby="numeros">
+        <h2 id="numeros" class="sr-only">Seus números</h2>
+        <dl class="stats">
+          <div><dt>curtidos</dt><dd>{{ p.stats.likes }}</dd></div>
+          <div><dt>matches</dt><dd>{{ p.stats.matches }}</dd></div>
+          <div><dt>salas de Match</dt><dd>{{ p.stats.rooms }}</dd></div>
+          <div><dt>votos no Match</dt><dd>{{ p.stats.votes }}</dd></div>
+        </dl>
+      </section>
+
+      <section class="card weeks-card" aria-labelledby="semanas">
+        <h2 id="semanas" class="card-title">Curtidas por semana</h2>
+        @if (activityError()) {
+          <p class="muted small">
+            Não deu pra carregar.
+            <button type="button" class="link" (click)="loadActivity()">Tentar de novo</button>
+          </p>
+        } @else {
+          <ol class="weeks" [class.loading]="!activity()" [style.--accent]="accent()"
+              [attr.aria-label]="activity() ? likesInWeeks() + ' curtidas nas últimas 12 semanas' : 'Carregando'">
+            @for (w of weeks(); track $index) {
+              <li [attr.data-level]="w.level" [attr.title]="activity() ? w.label : null">
+                <span class="sr-only">{{ w.label }}</span>
+              </li>
+            }
+          </ol>
+          <div class="weeks-legend" aria-hidden="true">
+            <span>12 semanas atrás</span>
+            <span>esta semana</span>
+          </div>
+        }
+      </section>
+    </div>
+
+    <section aria-labelledby="curtidos">
+      <div class="section-head">
+        <h2 id="curtidos" class="card-title">Seus curtidos</h2>
+        <a class="more" routerLink="/swipe">
+          <ww-icon name="plus" [size]="14" [stroke]="2.5" />
+          curtir mais
+        </a>
+      </div>
       <div class="card">
-        <!-- prévia ao vivo -->
-        <div class="head">
-          @if (preview(); as u) {
-            <ww-avatar [user]="u" [size]="56" [photo]="previewPhoto()" />
-            <div class="who">
-              <strong>{{ u.displayName }}</strong>
-              <span>&#64;{{ u.username }}</span>
+        @if (activity(); as a) {
+          @if (a.recentLikes.length) {
+            <ul class="posters">
+              @for (t of a.recentLikes; track t.id) {
+                <li>
+                  <a [routerLink]="titleLink(t)">
+                    <ww-poster class="art" [image]="t.poster" [widths]="[185, 342]" sizes="140px"
+                               [seed]="t.id" [title]="t.title" />
+                    <span class="name">{{ t.title }}</span>
+                  </a>
+                </li>
+              }
+            </ul>
+          } @else {
+            <div class="empty">
+              <img [src]="emptyBu.src" alt="" width="88" height="88" />
+              <strong>você ainda não curtiu nada.</strong>
+              <p>dá um "quero ver" no <a routerLink="/swipe">Swipe</a> ou no <a routerLink="/reels">Reels</a> e ele aparece aqui.</p>
             </div>
           }
-        </div>
-
-        <div class="row">
-          <label class="row-label" for="nome">Nome</label>
-          <div class="control">
-            <input id="nome" name="nome" autocomplete="nickname" [attr.maxlength]="nameMax" required
-                   [value]="name()" (input)="name.set($any($event.target).value)"
-                   [attr.aria-invalid]="nameError() ? 'true' : null"
-                   [attr.aria-describedby]="nameError() ? 'nome-erro' : null" />
-            @if (nameError(); as err) {
-              <p id="nome-erro" class="field-error">{{ err }}</p>
+        } @else if (activityError()) {
+          <p class="empty muted">Não deu pra carregar seus curtidos.</p>
+        } @else {
+          <ul class="posters" aria-hidden="true">
+            @for (i of [1, 2, 3, 4, 5, 6]; track i) {
+              <li><span class="art sk"></span></li>
             }
-          </div>
-        </div>
-
-        <div class="row">
-          <div class="row-label">
-            Arroba
-            <small>é com ela que você entra</small>
-          </div>
-          <div class="control readonly">&#64;{{ p.user.username }}</div>
-        </div>
-
-        <div class="row" role="radiogroup" aria-labelledby="cor-label" aria-describedby="cor-dica">
-          <div class="row-label" id="cor-label">
-            Sua cor
-            <small id="cor-dica">fundo das suas iniciais</small>
-          </div>
-          <div class="control swatches">
-            @for (c of colors; track c.bg; let i = $index) {
-              <label class="swatch" [style.--swatch]="c.bg" [style.--swatch-fg]="c.fg">
-                <input type="radio" name="cor" [value]="i" [checked]="color() === i" (change)="color.set(i)"
-                       [attr.aria-label]="c.name" />
-                <ww-icon name="check" [size]="14" [stroke]="2.5" />
-              </label>
-            }
-          </div>
-        </div>
-
-        <div class="row row--stack" role="radiogroup" aria-labelledby="bu-label" aria-describedby="bu-dica">
-          <div class="row-label" id="bu-label">
-            Seu Bu
-            <small id="bu-dica">o fantasminha que aparece no lugar da sua foto</small>
-          </div>
-          <div class="control tiles">
-            <label class="tile tile--initials" [style.--swatch]="colors[color()].bg" [style.color]="colors[color()].fg">
-              <input type="radio" name="avatar" [checked]="avatar() === 'initials'" (change)="avatar.set('initials')"
-                     aria-label="Sem Bu, só as iniciais" />
-              <span aria-hidden="true">Aa</span>
-            </label>
-            @for (m of mascots; track m.src; let i = $index) {
-              <label class="tile">
-                <input type="radio" name="avatar" [checked]="avatar() === i" (change)="avatar.set(i)" [attr.aria-label]="m.label" />
-                <img [src]="m.src" alt="" width="48" height="48" decoding="async" loading="lazy" />
-              </label>
-            }
-            @if (photo(); as src) {
-              <label class="tile tile--photo">
-                <input type="radio" name="avatar" [checked]="avatar() === 'photo'" (change)="avatar.set('photo')"
-                       aria-label="Sua foto" />
-                <img [src]="src" alt="" width="48" height="48" />
-              </label>
-            } @else {
-              <button type="button" class="tile tile--photo" aria-label="Enviar foto" (click)="file.click()">
-                <ww-icon name="camera" [size]="20" />
-              </button>
-            }
-          </div>
-          <div class="photo-actions">
-            <input #file class="sr-only" type="file" accept="image/png,image/jpeg,image/webp" tabindex="-1"
-                   aria-hidden="true" (change)="pickPhoto(file)" />
-            <button wwButton type="button" variant="soft" size="sm" (click)="file.click()">
-              <ww-icon name="camera" [size]="16" />
-              {{ photo() ? 'Trocar foto' : 'Enviar foto' }}
-            </button>
-            @if (photoError(); as err) {
-              <p class="field-error" role="alert">{{ err }}</p>
-            } @else {
-              <p class="hint">Por enquanto a foto fica só neste aparelho: os amigos veem seu Bu.</p>
-            }
-          </div>
-        </div>
-
-        <div class="row">
-          <label class="row-label" for="genero">Gênero favorito</label>
-          <div class="control">
-            <select id="genero" name="genero" (change)="setGenre($any($event.target).value)">
-              <option value="" [selected]="genreId() === null">Nenhum</option>
-              @for (g of genres(); track g.id) {
-                <option [value]="g.id" [selected]="genreId() === g.id">{{ g.name }}</option>
-              }
-            </select>
-          </div>
-        </div>
-
-        <div class="row row--stack">
-          <div class="row-label" id="fav-label">
-            Favorito de todos os tempos
-            <small>aquele que você vê de novo sem pensar duas vezes</small>
-          </div>
-          <ww-favorite-title-picker class="control" labelledBy="fav-label" [(value)]="favorite" />
-        </div>
-
-        <div class="row">
-          <div class="row-label">Seus números</div>
-          <dl class="control stats">
-            <div><dt>curtidos</dt><dd>{{ p.stats.likes }}</dd></div>
-            <div><dt>matches</dt><dd>{{ p.stats.matches }}</dd></div>
-          </dl>
-        </div>
-
-        <div class="savebar" [class.savebar--on]="dirty()">
-          <p class="status" aria-live="polite" [class.status--error]="status()?.kind === 'error'">
-            @if (status(); as s) {
-              {{ s.text }}
-            } @else if (dirty()) {
-              Você tem mudanças não salvas.
-            }
-          </p>
-          @if (dirty()) {
-            <button wwButton type="button" variant="outline" (click)="reset(); status.set(null)">Desfazer</button>
-          }
-          <button wwButton type="submit" variant="primary" [disabled]="!dirty() || !!nameError() || saving()">
-            {{ saving() ? 'Salvando…' : 'Salvar' }}
-          </button>
-        </div>
+          </ul>
+        }
       </div>
     </section>
-
-    <section aria-labelledby="sec-conta">
-      <h2 id="sec-conta" class="section-label">Conta</h2>
-      <div class="card">
-        <div class="row">
-          <div class="row-label">
-            E-mail
-            <small>ainda não dá para trocar por aqui</small>
-          </div>
-          <div class="control email">{{ p.email ?? '—' }}</div>
-        </div>
-        <div class="row">
-          <div class="row-label">Sair desta conta</div>
-          <div class="control end">
-            <button wwButton type="button" variant="soft" size="sm" (click)="logout()">
-              <ww-icon name="logout" [size]="16" />
-              Sair
-            </button>
-          </div>
-        </div>
-      </div>
-    </section>
-  </form>
+  </div>
 } @else if (loadError()) {
   <div class="state" role="alert">
     <p>Não deu pra carregar seu perfil.</p>
