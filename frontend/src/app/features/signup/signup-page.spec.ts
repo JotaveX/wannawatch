@@ -16,6 +16,7 @@ const fresh: AccountStatus = {
   emailVerified: false,
   titlesPicked: false,
   complete: false,
+  admin: false,
 };
 const picked: AccountStatus = { ...fresh, titlesPicked: true };
 const done: AccountStatus = { ...picked, emailVerified: true, complete: true };

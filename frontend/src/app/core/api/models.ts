@@ -213,6 +213,8 @@ export interface AccountStatus {
   titlesPicked: boolean;
   /** as duas etapas feitas: pode usar o app inteiro */
   complete: boolean;
+  /** administrador: vê a revisão dos vídeos do Reels (/admin/videos) */
+  admin: boolean;
 }
 
 export interface LoginResponse {
@@ -306,6 +308,8 @@ export interface TitleVideo {
   blockedInRegion: boolean;
   searchRank: number | null;
   status: VideoStatus;
+  /** quando foi aprovado ou reprovado (null enquanto pendente) */
+  reviewedAt: string | null;
 }
 
 export interface TitleVideoSearch {
@@ -320,9 +324,30 @@ export interface TitleVideoSearch {
   videos: TitleVideo[];
 }
 
+/** De onde saem os títulos da busca de vídeos. */
+export type DiscoverSource = 'POPULAR' | 'TRENDING' | 'TOP_RATED' | 'RECENT';
+
+/** Filtros da busca de vídeos no YouTube (todos opcionais; o back tem os padrões). */
+export interface DiscoverRequest {
+  limit: number;
+  /** pula títulos que já têm vídeo aprovado (padrão: sim) */
+  skipApproved?: boolean;
+  /** busca de novo títulos que já foram buscados (padrão: não) */
+  includeSearched?: boolean;
+  source?: DiscoverSource;
+  type?: MediaType | null;
+  /** slug do gênero */
+  genre?: string | null;
+  yearFrom?: number | null;
+  yearTo?: number | null;
+}
+
 export interface DiscoverResult {
   titlesSearched: number;
+  /** vídeos verticais guardados */
   videosFound: number;
+  /** vídeos que a busca trouxe mas eram horizontais (descartados) */
+  horizontalSkipped: number;
   /** preenchido quando a rodada parou no meio (ex.: cota do YouTube acabou) */
   error: string | null;
 }

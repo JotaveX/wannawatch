@@ -1,8 +1,9 @@
 import { HttpClient, provideHttpClient, withInterceptors } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
-import { provideRouter, Router } from '@angular/router';
+import { provideRouter, Router, UrlTree } from '@angular/router';
 import { API_BASE_URL } from '../api/api-config';
+import { requireAdmin } from './auth-guard';
 import { authInterceptor } from './auth-interceptor';
 import { AuthStore, initialsOf } from './auth-store';
 
@@ -50,6 +51,24 @@ describe('AuthStore + authInterceptor', () => {
   it('lê a sessão salva ao abrir o app', () => {
     localStorage.setItem('ww.session', JSON.stringify({ token: 'tok', user }));
     expect(setup().loggedIn()).toBe(true);
+  });
+
+  it('só deixa administrador entrar nas telas de admin', () => {
+    const account = { email: 'b@x.com', emailVerified: true, titlesPicked: true, complete: true };
+    const guard = () =>
+      TestBed.runInInjectionContext(() =>
+        requireAdmin({} as never, { url: '/admin/videos' } as never),
+      );
+
+    localStorage.setItem(
+      'ww.session',
+      JSON.stringify({ token: 't', user, account: { ...account, admin: false } }),
+    );
+    setup();
+    expect(guard()).toBeInstanceOf(UrlTree);
+
+    TestBed.inject(AuthStore).updateAccount({ ...account, admin: true });
+    expect(guard()).toBe(true);
   });
 
   it('ignora sessão salva corrompida', () => {

@@ -66,10 +66,11 @@ Swagger: `http://localhost:8081/swagger-ui.html`. Component showcase (dev only):
   can't miss a match. Room mascot count `MatchService.MASCOTS` must match `frontend/.../room-mascots.ts` and the
   files in `frontend/public/mascot/rooms`.
 - **Reels videos (experiment)**: `video` package. `YoutubeClient` (YouTube Data API v3, `YOUTUBE_API_KEY`) finds
-  short trailers; only metadata is stored in `title_video` (status `PENDING`/`APPROVED`/`REJECTED`) and
+  short vertical trailers (`#shorts`, horizontals are discarded using the player's aspect ratio); only metadata is stored in `title_video` (status `PENDING`/`APPROVED`/`REJECTED`) and
   `title_video_search` (one row per searched title, so quota isn't wasted). Videos are never downloaded — they play
-  through the YouTube embed (API terms). Admin endpoints use `shared/web/AdminGuard` (`X-Admin-Token`, 403 on a
-  wrong token so the frontend interceptor doesn't log out). Review page: `/dev/videos` (dev only).
+  through the YouTube embed (API terms). Admin endpoints take an `AuthUser` and call `auth/AdminGuard.require` (`app_user.is_admin`, 403
+  otherwise); `account.admin` drives the `requireAdmin` guard and the "Vídeos" item below Ajustes. Review page:
+  `/admin/videos`.
 - **Tests**: integration tests use `TestcontainersConfiguration` and `src/test/resources/config/application.yml`
   (fake TMDB token, import disabled). TMDB responses are fixtures in `src/test/resources/tmdb` (`TmdbFixtures`).
 

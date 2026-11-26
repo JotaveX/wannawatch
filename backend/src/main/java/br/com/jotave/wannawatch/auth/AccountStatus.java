@@ -8,8 +8,9 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  * @param email         e-mail da conta
  * @param emailVerified já confirmou o e-mail com o código
  * @param titlesPicked  já escolheu os títulos de que gosta (pelo menos 5)
+ * @param admin         é administrador (vê a revisão dos vídeos do Reels)
  */
-public record AccountStatus(String email, boolean emailVerified, boolean titlesPicked) {
+public record AccountStatus(String email, boolean emailVerified, boolean titlesPicked, boolean admin) {
 
     /** Terminou o cadastro: pode usar o app inteiro. */
     @JsonProperty

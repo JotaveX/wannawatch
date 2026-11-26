@@ -5,7 +5,13 @@ import { provideRouter, Router } from '@angular/router';
 import { API_BASE_URL } from '../../core/api/api-config';
 import { LoginPage, safeReturn } from './login-page';
 
-const done = { email: 'x@exemplo.com', emailVerified: true, titlesPicked: true, complete: true };
+const done = {
+  email: 'x@exemplo.com',
+  emailVerified: true,
+  titlesPicked: true,
+  complete: true,
+  admin: false,
+};
 
 describe('LoginPage', () => {
   let http: HttpTestingController;

@@ -110,8 +110,8 @@ Documentação interativa (Swagger): <http://localhost:8081/swagger-ui.html>
 | `GET …/deck?cursor=&size=` | Deck da sala na ordem do grupo, sem o que eu já votei, com o motivo de cada carta |
 | `PUT …/votes/{titleId}` (`{ liked }`) · `DELETE …/votes/{titleId}` | Votar · desfazer voto |
 | `DELETE …/participants/me` | Sair da sala |
-| `POST /api/admin/videos/discover` (`{ limit?, titleIds? }`) | Admin: busca vídeos curtos no YouTube para os títulos mais populares ainda não buscados (1 a 20, padrão 10) |
-| `GET /api/admin/videos` · `PATCH /api/admin/videos/{id}` (`{ status }`) | Admin: títulos buscados com os vídeos achados · aprovar/reprovar (`PENDING`, `APPROVED`, `REJECTED`) |
+| `POST /api/admin/videos/discover` (`{ limit?, titleIds?, skipApproved?, includeSearched?, source?, type?, genre?, yearFrom?, yearTo? }`) | Admin: busca Shorts no YouTube para `limit` títulos (1 a 20, padrão 10) e guarda só os verticais. Por padrão pega os mais populares ainda não buscados e pula quem já tem vídeo aprovado (`skipApproved: false` desliga); `includeSearched` busca de novo os já buscados; `source` = `POPULAR` / `TRENDING` (em alta) / `TOP_RATED` (≥100 votos) / `RECENT` (lançamentos); `type`, `genre` (slug) e `yearFrom`/`yearTo` filtram. `titleIds` ignora os filtros |
+| `GET /api/admin/videos` · `PATCH /api/admin/videos/{id}` (`{ status }`) | Admin: títulos buscados com os vídeos achados (cada vídeo traz `reviewedAt`, quando foi aprovado/reprovado) · aprovar/reprovar (`PENDING`, `APPROVED`, `REJECTED`; voltar a `PENDING` limpa a data) |
 
 - `type` é `MOVIE` ou `SERIES`; `genre` é o slug (ex.: `ficcao-cientifica`).
 - `source` (opcional) diz de que tela veio a interação: `SWIPE`, `REELS`, `DETAILS`, `HOME` ou `MATCH`
@@ -123,7 +123,7 @@ Documentação interativa (Swagger): <http://localhost:8081/swagger-ui.html>
 - Catálogo é aberto; curtidas, sinais, Match e `/auth/me` exigem `Authorization: Bearer <token>` (401 sem ele).
   Home, Swipe e Reels aceitam o token opcionalmente: sem ele respondem como antes; com um token
   inválido dão 401.
-- Os endpoints `/api/admin/videos` pedem o header `X-Admin-Token` (403 se errado, 404 sem `ADMIN_TOKEN`).
+- Os endpoints `/api/admin/videos` pedem login de administrador (`app_user.is_admin`): 401 sem login, 403 para quem não é admin.
 - CORS: origens liberadas em `CORS_ALLOWED_ORIGINS` (padrão `http://localhost:4200`).
 
 ## 4. Front-end
@@ -137,7 +137,6 @@ npm test -- --watch=false
 
 - A URL da API fica em `src/environments/` (dev: `http://localhost:8081/api`).
 - Vitrine dos componentes (só em dev): <http://localhost:4200/dev/componentes>.
-- Revisão dos vídeos do Reels (só em dev): <http://localhost:4200/dev/videos>.
 
 Organização (`src/app`):
 
@@ -197,13 +196,18 @@ Regras:
 Em teste: achar vídeos curtos de cada título para o Reels virar vídeo de verdade.
 
 - A busca usa a YouTube Data API v3 (`search.list` com `videoDuration=short`, `videoEmbeddable=true`,
-  região BR), com a consulta `"<título> [série] <ano> trailer"`, e lê os detalhes com `videos.list`.
+  região BR, 15 resultados), com a consulta `"<título> [série] trailer #shorts"`, e lê os detalhes
+  com `videos.list`.
+- **Só ficam os verticais** (o Reels é 9:16). A busca não filtra por formato, então a proporção vem
+  do player (`player.embedWidth/embedHeight`, sem tarjas) e os horizontais são descartados.
 - Só os **metadados** vão para o banco (`title_video`): id do vídeo, canal, duração, proporção do
   player, se é embutível e se está bloqueado no Brasil. O vídeo nunca é baixado: os termos da API
   proíbem guardar o conteúdo, então ele toca pelo player oficial (embed).
 - Cada título buscado fica em `title_video_search`, mesmo sem resultado, e não é buscado de novo
   (a não ser pedindo por `titleIds`). A cota padrão é de 100 buscas por dia.
-- Tudo entra como `PENDING`; a revisão é em `/dev/videos`. O Reels ainda não usa esses vídeos.
+- Tudo entra como `PENDING`; a revisão é em `/admin/videos`, só para administradores
+  (`app_user.is_admin`; hoje só o `jvpiloni`, marcado na migration V12). O Reels ainda não usa
+  esses vídeos.
 
 ### Atribuição
 
@@ -226,10 +230,10 @@ lateral. Os dados de "onde assistir" vêm da JustWatch, creditada em `/sobre` e 
 | `/cadastro` | Criar conta em 3 etapas: conta, títulos de que gosta, confirmar o e-mail (sem navegação) | claro |
 | `/perfil` | Seu perfil: números, curtidas por semana e últimos curtidos | claro |
 | `/ajustes` | Nome, cor, Bu, favoritos, conta e sair | claro |
+| `/admin/videos` | Só administradores: teste dos vídeos do Reels, duas abas: Verificação (fila dos pendentes por título com Aprovar/Reprovar só em ícone, busca no YouTube com "Pular títulos que já têm vídeo aprovado" e busca avançada — de onde, tipo, gênero, ano, buscar de novo —, "Reprovar todos") e Histórico (aprovados/reprovados, com filtro, busca e "Desfazer") (link "Vídeos" abaixo de Ajustes na barra lateral e em Ajustes › Conta) | claro |
 | `/sobre` | Sobre e créditos | claro |
 | `/series`, `/filmes` | Por enquanto abrem a busca | escuro |
 | `/dev/componentes` | Vitrine de componentes (só em dev) | claro e escuro |
-| `/dev/videos` | Teste dos vídeos do Reels: busca no YouTube e aprova/reprova (só em dev, pede o `ADMIN_TOKEN`) | claro |
 
 No celular a navegação fica numa barra de abas embaixo. No desktop (a partir de 1024px), Swipe,
 Reels e as telas secundárias ganham uma barra lateral no estilo TikTok web; Início, Detalhes e

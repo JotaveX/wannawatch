@@ -30,3 +30,6 @@ export const SIDE_ITEMS: NavItem[] = [
   { label: 'Match', path: '/match', icon: 'groups' },
   { label: 'Ajustes', path: '/ajustes', icon: 'settings' },
 ];
+
+/** Só para administradores, logo abaixo de Ajustes. */
+export const ADMIN_ITEM: NavItem = { label: 'Vídeos', path: '/admin/videos', icon: 'play' };

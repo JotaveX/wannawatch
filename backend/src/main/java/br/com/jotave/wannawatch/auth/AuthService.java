@@ -49,10 +49,11 @@ public class AuthService {
     /** Em que etapa do cadastro a conta está. */
     @Transactional(readOnly = true)
     public AccountStatus status(long userId) {
-        return jdbc.sql("SELECT email, email_verified_at, titles_picked_at FROM app_user WHERE id = :id")
+        return jdbc.sql("SELECT email, email_verified_at, titles_picked_at, is_admin FROM app_user WHERE id = :id")
                 .param("id", userId)
                 .query((rs, n) -> new AccountStatus(rs.getString("email"),
-                        rs.getObject("email_verified_at") != null, rs.getObject("titles_picked_at") != null))
+                        rs.getObject("email_verified_at") != null, rs.getObject("titles_picked_at") != null,
+                        rs.getBoolean("is_admin")))
                 .single();
     }
 

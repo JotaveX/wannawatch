@@ -1,9 +1,12 @@
 package br.com.jotave.wannawatch.video;
 
 import br.com.jotave.wannawatch.catalog.application.ImageUrls;
+import br.com.jotave.wannawatch.catalog.application.SqlFilters;
 import br.com.jotave.wannawatch.shared.web.BadRequestException;
 import br.com.jotave.wannawatch.shared.web.NotFoundException;
+import br.com.jotave.wannawatch.video.VideoDtos.DiscoverRequest;
 import br.com.jotave.wannawatch.video.VideoDtos.DiscoverResult;
+import br.com.jotave.wannawatch.video.VideoDtos.DiscoverSource;
 import br.com.jotave.wannawatch.video.VideoDtos.TitleVideos;
 import br.com.jotave.wannawatch.video.VideoDtos.VideoStatus;
 import br.com.jotave.wannawatch.video.VideoDtos.VideoView;
@@ -15,6 +18,7 @@ import java.sql.Timestamp;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.format.DateTimeParseException;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -26,7 +30,9 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 /**
  * Busca vídeos curtos dos títulos na API do YouTube e guarda os metadados em {@code title_video}
- * como PENDING, para revisão. Fase de teste: roda só sob demanda, poucos títulos por vez.
+ * como PENDING, para revisão. Só ficam os verticais (o Reels é em tela cheia, 9:16); a busca não
+ * filtra por formato, então traz vários e descarta os horizontais. Fase de teste: roda só sob
+ * demanda, poucos títulos por vez.
  */
 @Service
 public class VideoDiscoveryService {
@@ -53,52 +59,95 @@ public class VideoDiscoveryService {
 
     record TitleRow(long id, String title, String mediaType, Integer year) {}
 
-    public DiscoverResult discover(Integer limit, List<Long> titleIds) {
+    public DiscoverResult discover(DiscoverRequest req) {
         if (!youtube.enabled()) {
             throw new BadRequestException("YOUTUBE_API_KEY não configurada no .env.");
         }
-        int n = Math.clamp(limit == null ? DEFAULT_LIMIT : limit, 1, MAX_LIMIT);
-        List<TitleRow> titles = pickTitles(n, titleIds);
+        if (req.yearFrom() != null && req.yearTo() != null && req.yearFrom() > req.yearTo()) {
+            throw new BadRequestException("O ano inicial não pode ser depois do ano final.");
+        }
+        int n = Math.clamp(req.limit() == null ? DEFAULT_LIMIT : req.limit(), 1, MAX_LIMIT);
+        List<TitleRow> titles = pickTitles(n, req);
 
         int searched = 0;
         int found = 0;
+        int skipped = 0;
         for (TitleRow t : titles) {
             String query = query(t);
             try {
-                List<YoutubeDto.Video> videos = youtube.videos(youtube.searchShortVideos(query));
-                tx.executeWithoutResult(s -> save(t.id(), query, videos));
+                List<YoutubeDto.Video> all = youtube.videos(youtube.searchShortVideos(query));
+                List<YoutubeDto.Video> vertical = all.stream().filter(VideoDiscoveryService::isVertical).toList();
+                tx.executeWithoutResult(s -> save(t.id(), query, vertical));
                 searched++;
-                found += videos.size();
+                found += vertical.size();
+                skipped += all.size() - vertical.size();
             } catch (YoutubeException e) {
                 log.warn("Busca de vídeos parou em \"{}\": {}", query, e.getMessage());
-                return new DiscoverResult(searched, found, e.getMessage());
+                return new DiscoverResult(searched, found, skipped, e.getMessage());
             }
         }
-        return new DiscoverResult(searched, found, null);
+        return new DiscoverResult(searched, found, skipped, null);
     }
 
-    private List<TitleRow> pickTitles(int n, List<Long> titleIds) {
+    private List<TitleRow> pickTitles(int n, DiscoverRequest req) {
         String select = """
-                SELECT id, title, media_type, CAST(EXTRACT(YEAR FROM release_date) AS INTEGER) AS year
-                FROM title""";
-        if (titleIds != null && !titleIds.isEmpty()) {
-            return jdbc.sql(select + " WHERE id IN (:ids) ORDER BY popularity DESC, id DESC LIMIT :n")
-                    .param("ids", titleIds).param("n", n)
+                SELECT t.id, t.title, t.media_type, CAST(EXTRACT(YEAR FROM t.release_date) AS INTEGER) AS year
+                FROM title t""";
+        if (req.titleIds() != null && !req.titleIds().isEmpty()) {
+            return jdbc.sql(select + " WHERE t.id IN (:ids) ORDER BY t.popularity DESC, t.id DESC LIMIT :n")
+                    .param("ids", req.titleIds()).param("n", n)
                     .query(TitleRow.class).list();
         }
-        return jdbc.sql(select + """
-                 t WHERE NOT EXISTS (SELECT 1 FROM title_video_search s WHERE s.title_id = t.id)
-                ORDER BY popularity DESC, id DESC LIMIT :n""")
-                .param("n", n)
-                .query(TitleRow.class).list();
+        Map<String, Object> params = new HashMap<>();
+        params.put("n", n);
+        DiscoverSource source = req.source() == null ? DiscoverSource.POPULAR : req.source();
+        StringBuilder sql = new StringBuilder(select);
+        if (source == DiscoverSource.TRENDING) {
+            sql.append(" JOIN title_ranking r ON r.title_id = t.id AND r.list_key = 'trending_day'");
+        }
+        sql.append(" WHERE TRUE");
+        if (!Boolean.TRUE.equals(req.includeSearched())) {
+            sql.append(" AND NOT EXISTS (SELECT 1 FROM title_video_search s WHERE s.title_id = t.id)");
+        }
+        if (!Boolean.FALSE.equals(req.skipApproved())) {
+            sql.append(" AND NOT EXISTS (SELECT 1 FROM title_video v"
+                    + " WHERE v.title_id = t.id AND v.status = 'APPROVED')");
+        }
+        sql.append(SqlFilters.typeAndGenre(req.type(), req.genre(), params));
+        if (req.yearFrom() != null) {
+            sql.append(" AND t.release_date >= make_date(:yearFrom, 1, 1)");
+            params.put("yearFrom", req.yearFrom());
+        }
+        if (req.yearTo() != null) {
+            sql.append(" AND t.release_date < make_date(:yearAfter, 1, 1)");
+            params.put("yearAfter", req.yearTo() + 1);
+        }
+        sql.append(switch (source) {
+            case POPULAR -> " ORDER BY t.popularity DESC, t.id DESC";
+            case TRENDING -> " ORDER BY r.position";
+            // nota alta com poucos votos não diz muito: exige um mínimo
+            case TOP_RATED -> " AND t.vote_count >= 100"
+                    + " ORDER BY t.vote_average DESC NULLS LAST, t.vote_count DESC, t.id DESC";
+            case RECENT -> " AND t.release_date <= CURRENT_DATE ORDER BY t.release_date DESC, t.id DESC";
+        });
+        sql.append(" LIMIT :n");
+        return jdbc.sql(sql.toString()).params(params).query(TitleRow.class).list();
     }
 
-    /** "Duna 2021 trailer" / "Round 6 série trailer": o ano e o tipo ajudam a não cair em homônimos. */
+    /**
+     * "Duna trailer #shorts" / "Round 6 série trailer #shorts": o #shorts puxa os vídeos verticais
+     * (o ano ficou de fora: quase nenhum Short põe o ano no título).
+     */
     static String query(TitleRow t) {
         StringBuilder q = new StringBuilder(t.title());
         if ("SERIES".equals(t.mediaType())) q.append(" série");
-        if (t.year() != null) q.append(' ').append(t.year());
-        return q.append(" trailer").toString();
+        return q.append(" trailer #shorts").toString();
+    }
+
+    /** O player vem sem tarjas, na proporção real: mais alto que largo = vertical. */
+    static boolean isVertical(YoutubeDto.Video v) {
+        var p = v.player();
+        return p != null && p.embedWidth() != null && p.embedHeight() != null && p.embedHeight() > p.embedWidth();
     }
 
     private void save(long titleId, String query, List<YoutubeDto.Video> videos) {
@@ -173,7 +222,8 @@ public class VideoDiscoveryService {
 
     record VideoRow(long id, long titleId, String externalKey, String videoTitle, String channelTitle,
                     Instant publishedAt, Integer durationSeconds, Integer width, Integer height,
-                    boolean embeddable, boolean blockedInRegion, Integer searchRank, String status) {}
+                    boolean embeddable, boolean blockedInRegion, Integer searchRank, String status,
+                    Instant reviewedAt) {}
 
     /** Títulos já buscados (mais recentes primeiro) com os vídeos de cada um. */
     public List<TitleVideos> list() {
@@ -188,7 +238,8 @@ public class VideoDiscoveryService {
 
         Map<Long, List<VideoView>> byTitle = jdbc.sql("""
                 SELECT id, title_id, external_key, video_title, channel_title, published_at,
-                       duration_seconds, width, height, embeddable, blocked_in_region, search_rank, status
+                       duration_seconds, width, height, embeddable, blocked_in_region, search_rank, status,
+                       reviewed_at
                 FROM title_video WHERE title_id IN (:ids)
                 ORDER BY title_id, search_rank NULLS LAST, id""")
                 .param("ids", searches.stream().map(SearchRow::titleId).toList())
@@ -203,7 +254,11 @@ public class VideoDiscoveryService {
 
     public void setStatus(long videoId, VideoStatus status) {
         if (status == null) throw new BadRequestException("Informe o status.");
-        int updated = jdbc.sql("UPDATE title_video SET status = :s, updated_at = now() WHERE id = :id")
+        int updated = jdbc.sql("""
+                UPDATE title_video
+                SET status = :s, updated_at = now(),
+                    reviewed_at = CASE WHEN :s = 'PENDING' THEN NULL ELSE now() END
+                WHERE id = :id""")
                 .param("s", status.name()).param("id", videoId).update();
         if (updated == 0) throw new NotFoundException("Vídeo não encontrado.");
     }
@@ -212,6 +267,6 @@ public class VideoDiscoveryService {
         boolean vertical = r.width() != null && r.height() != null && r.height() > r.width();
         return new VideoView(r.id(), r.externalKey(), r.videoTitle(), r.channelTitle(), r.publishedAt(),
                 r.durationSeconds(), r.width(), r.height(), vertical, r.embeddable(), r.blockedInRegion(),
-                r.searchRank(), VideoStatus.valueOf(r.status()));
+                r.searchRank(), VideoStatus.valueOf(r.status()), r.reviewedAt());
     }
 }

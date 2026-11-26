@@ -16,8 +16,10 @@ import br.com.jotave.wannawatch.TestcontainersConfiguration;
 import br.com.jotave.wannawatch.video.youtube.YoutubeClient;
 import br.com.jotave.wannawatch.video.youtube.YoutubeDto;
 import br.com.jotave.wannawatch.video.youtube.YoutubeException;
+import com.jayway.jsonpath.JsonPath;
 import java.time.Instant;
 import java.util.List;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,7 +31,7 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
-/** Busca de vídeos no YouTube (cliente mockado) e revisão, contra um Postgres real. */
+/** Busca de vídeos no YouTube (cliente mockado) e revisão por admin, contra um Postgres real. */
 @SpringBootTest
 @AutoConfigureMockMvc
 @Import(TestcontainersConfiguration.class)
@@ -41,44 +43,54 @@ class VideoAdminIntegrationTest {
 
     long duna;
     long serie;
+    String admin;
 
     @BeforeEach
-    void seed() {
+    void seed() throws Exception {
         jdbc.sql("TRUNCATE title, genre, person RESTART IDENTITY CASCADE").update();
         duna = insert(1, "MOVIE", "Duna", "2021-09-15", 50);
         serie = insert(2, "SERIES", "Round 6", null, 40);
         insert(3, "MOVIE", "Pouco popular", null, 1);
         when(youtube.enabled()).thenReturn(true);
+        jdbc.sql("UPDATE app_user SET is_admin = (username = 'jotave')").update();
+        admin = login("jotave");
+    }
+
+    @AfterEach
+    void noAdmins() {
+        jdbc.sql("UPDATE app_user SET is_admin = FALSE").update();
     }
 
     @Test
-    void buscaOsMaisPopularesEGuardaComoPendente() throws Exception {
-        when(youtube.searchShortVideos("Duna 2021 trailer")).thenReturn(List.of("v1", "v2"));
-        when(youtube.searchShortVideos("Round 6 série trailer")).thenReturn(List.of());
-        when(youtube.videos(List.of("v1", "v2"))).thenReturn(List.of(
+    void buscaOsMaisPopularesEGuardaSoOsVerticais() throws Exception {
+        when(youtube.searchShortVideos("Duna trailer #shorts")).thenReturn(List.of("v1", "v2", "v3"));
+        when(youtube.searchShortVideos("Round 6 série trailer #shorts")).thenReturn(List.of());
+        when(youtube.videos(List.of("v1", "v2", "v3"))).thenReturn(List.of(
                 video("v1", 720L, 1280L, "PT45S", null),
-                video("v2", 1280L, 720L, "PT2M10S", new YoutubeDto.RegionRestriction(List.of("US"), null))));
+                video("v2", 1280L, 720L, "PT2M10S", null),
+                video("v3", 720L, 1280L, "PT30S", new YoutubeDto.RegionRestriction(List.of("US"), null))));
         when(youtube.videos(List.of())).thenReturn(List.of());
 
         mvc.perform(discover("{\"limit\":2}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.titlesSearched").value(2))
                 .andExpect(jsonPath("$.videosFound").value(2))
+                .andExpect(jsonPath("$.horizontalSkipped").value(1))
                 .andExpect(jsonPath("$.error").doesNotExist());
 
-        mvc.perform(get("/api/admin/videos").header("X-Admin-Token", "test-admin"))
+        mvc.perform(get("/api/admin/videos").header("Authorization", "Bearer " + admin))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(2))
                 .andExpect(jsonPath("$[?(@.title == 'Duna')].videos[0].externalKey").value("v1"))
                 .andExpect(jsonPath("$[?(@.title == 'Duna')].videos[0].vertical").value(true))
                 .andExpect(jsonPath("$[?(@.title == 'Duna')].videos[0].durationSeconds").value(45))
                 .andExpect(jsonPath("$[?(@.title == 'Duna')].videos[0].status").value("PENDING"))
-                .andExpect(jsonPath("$[?(@.title == 'Duna')].videos[1].vertical").value(false))
+                .andExpect(jsonPath("$[?(@.title == 'Duna')].videos[1].externalKey").value("v3"))
                 .andExpect(jsonPath("$[?(@.title == 'Duna')].videos[1].blockedInRegion").value(true))
                 .andExpect(jsonPath("$[?(@.title == 'Round 6')].resultsCount").value(0));
 
         // a próxima rodada pula quem já foi buscado
-        when(youtube.searchShortVideos("Pouco popular trailer")).thenReturn(List.of());
+        when(youtube.searchShortVideos("Pouco popular trailer #shorts")).thenReturn(List.of());
         mvc.perform(discover("{\"limit\":5}")).andExpect(jsonPath("$.titlesSearched").value(1));
     }
 
@@ -90,22 +102,61 @@ class VideoAdminIntegrationTest {
         long id = jdbc.sql("SELECT id FROM title_video WHERE title_id = :t").param("t", duna)
                 .query(Long.class).single();
 
-        mvc.perform(patch("/api/admin/videos/" + id).header("X-Admin-Token", "test-admin")
+        mvc.perform(patch("/api/admin/videos/" + id).header("Authorization", "Bearer " + admin)
                         .contentType(MediaType.APPLICATION_JSON).content("{\"status\":\"APPROVED\"}"))
                 .andExpect(status().isNoContent());
         assertThat(jdbc.sql("SELECT status FROM title_video WHERE id = :id").param("id", id)
                 .query(String.class).single()).isEqualTo("APPROVED");
+        mvc.perform(get("/api/admin/videos").header("Authorization", "Bearer " + admin))
+                .andExpect(jsonPath("$[?(@.title == 'Duna')].videos[0].reviewedAt").isNotEmpty());
 
-        mvc.perform(patch("/api/admin/videos/999999").header("X-Admin-Token", "test-admin")
+        // voltar para pendente limpa a data da revisão
+        mvc.perform(patch("/api/admin/videos/" + id).header("Authorization", "Bearer " + admin)
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"status\":\"PENDING\"}"))
+                .andExpect(status().isNoContent());
+        assertThat(jdbc.sql("SELECT reviewed_at IS NULL FROM title_video WHERE id = :id").param("id", id)
+                .query(Boolean.class).single()).isTrue();
+
+        mvc.perform(patch("/api/admin/videos/999999").header("Authorization", "Bearer " + admin)
                         .contentType(MediaType.APPLICATION_JSON).content("{\"status\":\"REJECTED\"}"))
                 .andExpect(status().isNotFound());
     }
 
     @Test
+    void buscaAvancadaFiltraTipoAnoEPulaQuemTemVideoAprovado() throws Exception {
+        when(youtube.searchShortVideos(anyString())).thenReturn(List.of());
+        when(youtube.videos(anyList())).thenReturn(List.of());
+
+        // só séries
+        mvc.perform(discover("{\"limit\":5,\"type\":\"SERIES\"}"))
+                .andExpect(jsonPath("$.titlesSearched").value(1));
+        verify(youtube).searchShortVideos("Round 6 série trailer #shorts");
+
+        // por ano de lançamento (só Duna é de 2021)
+        mvc.perform(discover("{\"limit\":5,\"yearFrom\":2020,\"yearTo\":2022}"))
+                .andExpect(jsonPath("$.titlesSearched").value(1));
+        verify(youtube).searchShortVideos("Duna trailer #shorts");
+
+        // ano inicial depois do final
+        mvc.perform(discover("{\"yearFrom\":2024,\"yearTo\":2020}")).andExpect(status().isBadRequest());
+
+        // Duna ganha um vídeo aprovado: buscando de novo os já buscados, ela fica de fora...
+        jdbc.sql("""
+                INSERT INTO title_video (title_id, source, platform, external_key, status)
+                VALUES (:t, 'YOUTUBE_SEARCH', 'YOUTUBE', 'aprovado123', 'APPROVED')""")
+                .param("t", duna).update();
+        mvc.perform(discover("{\"limit\":5,\"includeSearched\":true}"))
+                .andExpect(jsonPath("$.titlesSearched").value(2));
+        // ...a não ser que a opção de pular esteja desligada
+        mvc.perform(discover("{\"limit\":5,\"includeSearched\":true,\"skipApproved\":false}"))
+                .andExpect(jsonPath("$.titlesSearched").value(3));
+    }
+
+    @Test
     void paraQuandoACotaAcabaEDevolveOQueJaFez() throws Exception {
-        when(youtube.searchShortVideos("Duna 2021 trailer")).thenReturn(List.of());
+        when(youtube.searchShortVideos("Duna trailer #shorts")).thenReturn(List.of());
         when(youtube.videos(List.of())).thenReturn(List.of());
-        when(youtube.searchShortVideos("Round 6 série trailer"))
+        when(youtube.searchShortVideos("Round 6 série trailer #shorts"))
                 .thenThrow(new YoutubeException("A cota diária da API do YouTube acabou.", 403, true, null));
 
         mvc.perform(discover("{\"limit\":3}"))
@@ -116,15 +167,31 @@ class VideoAdminIntegrationTest {
     }
 
     @Test
-    void tokenErradoE403() throws Exception {
-        mvc.perform(post("/api/admin/videos/discover").header("X-Admin-Token", "errado"))
+    void soAdministradorEntra() throws Exception {
+        mvc.perform(get("/api/admin/videos")).andExpect(status().isUnauthorized());
+        String bia = login("bia");
+        mvc.perform(post("/api/admin/videos/discover").header("Authorization", "Bearer " + bia))
                 .andExpect(status().isForbidden());
-        mvc.perform(get("/api/admin/videos")).andExpect(status().isForbidden());
+        mvc.perform(get("/api/admin/videos").header("Authorization", "Bearer " + bia))
+                .andExpect(status().isForbidden());
         verify(youtube, never()).searchShortVideos(anyString());
+
+        mvc.perform(get("/api/auth/account").header("Authorization", "Bearer " + admin))
+                .andExpect(jsonPath("$.account.admin").value(true));
+        mvc.perform(get("/api/auth/account").header("Authorization", "Bearer " + bia))
+                .andExpect(jsonPath("$.account.admin").value(false));
+    }
+
+    private String login(String username) throws Exception {
+        String body = mvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"username\":\"" + username + "\",\"password\":\"wannawatch\"}"))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        return JsonPath.read(body, "$.token");
     }
 
     private org.springframework.test.web.servlet.RequestBuilder discover(String json) {
-        return post("/api/admin/videos/discover").header("X-Admin-Token", "test-admin")
+        return post("/api/admin/videos/discover").header("Authorization", "Bearer " + admin)
                 .contentType(MediaType.APPLICATION_JSON).content(json);
     }
 

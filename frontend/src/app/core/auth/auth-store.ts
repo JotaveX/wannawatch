@@ -32,6 +32,8 @@ export class AuthStore {
   readonly loggedIn = computed(() => this.session() !== null);
   readonly initials = computed(() => initialsOf(this.user()?.displayName ?? ''));
   readonly account = computed(() => this.session()?.account ?? null);
+  /** Só esconde/mostra o menu de admin; quem decide de verdade é o back (403). */
+  readonly isAdmin = computed(() => this.session()?.account?.admin === true);
 
   /** Sem `account` (sessão antiga) conta como feito: o refresh() corrige se não for. */
   readonly signupStep = computed<SignupStep>(() => {

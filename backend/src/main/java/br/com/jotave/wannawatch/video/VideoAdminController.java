@@ -1,6 +1,7 @@
 package br.com.jotave.wannawatch.video;
 
-import br.com.jotave.wannawatch.shared.web.AdminGuard;
+import br.com.jotave.wannawatch.auth.AdminGuard;
+import br.com.jotave.wannawatch.auth.AuthUser;
 import br.com.jotave.wannawatch.video.VideoDtos.DiscoverRequest;
 import br.com.jotave.wannawatch.video.VideoDtos.DiscoverResult;
 import br.com.jotave.wannawatch.video.VideoDtos.StatusRequest;
@@ -12,16 +13,13 @@ import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-/** Teste dos vídeos do Reels: busca no YouTube e revisão. Protegido pelo X-Admin-Token. */
+/** Teste dos vídeos do Reels: busca no YouTube e revisão. Só para administradores. */
 @RestController
 @RequestMapping("/api/admin/videos")
 public class VideoAdminController {
-
-    private static final String TOKEN = "X-Admin-Token";
 
     private final AdminGuard guard;
     private final VideoDiscoveryService service;
@@ -32,22 +30,21 @@ public class VideoAdminController {
     }
 
     @PostMapping("/discover")
-    public DiscoverResult discover(@RequestHeader(value = TOKEN, required = false) String token,
-                                   @RequestBody(required = false) DiscoverRequest body) {
-        guard.check(token);
-        return body == null ? service.discover(null, null) : service.discover(body.limit(), body.titleIds());
+    public DiscoverResult discover(AuthUser user, @RequestBody(required = false) DiscoverRequest body) {
+        guard.require(user);
+        return service.discover(body == null ? DiscoverRequest.defaults() : body);
     }
 
     @GetMapping
-    public List<TitleVideos> list(@RequestHeader(value = TOKEN, required = false) String token) {
-        guard.check(token);
+    public List<TitleVideos> list(AuthUser user) {
+        guard.require(user);
         return service.list();
     }
 
     @PatchMapping("/{id}")
-    public ResponseEntity<Void> setStatus(@RequestHeader(value = TOKEN, required = false) String token,
-                                          @PathVariable long id, @RequestBody StatusRequest body) {
-        guard.check(token);
+    public ResponseEntity<Void> setStatus(AuthUser user, @PathVariable long id,
+                                          @RequestBody StatusRequest body) {
+        guard.require(user);
         service.setStatus(id, body.status());
         return ResponseEntity.noContent().build();
     }

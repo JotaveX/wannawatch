@@ -79,7 +79,7 @@ wannawatch:
     api-key: ${YOUTUBE_API_KEY:}
     region-code: BR
     relevance-language: pt
-    results-per-search: 5
+    results-per-search: 15   # a busca custa o mesmo com 1 ou 50; só os verticais ficam
   import:
     on-startup-if-empty: true
     cron: "0 0 4 * * *"   # todo dia às 4h; "-" desliga

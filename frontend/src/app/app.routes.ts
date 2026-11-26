@@ -1,6 +1,12 @@
 import { isDevMode } from '@angular/core';
 import { Routes } from '@angular/router';
-import { guestOnly, requireLogin, requireSignupDone, signupPending } from './core/auth/auth-guard';
+import {
+  guestOnly,
+  requireAdmin,
+  requireLogin,
+  requireSignupDone,
+  signupPending,
+} from './core/auth/auth-guard';
 import { RouteMeta } from './layout/route-meta';
 import { profileResolver } from './features/profile/profile-resolver';
 
@@ -107,18 +113,20 @@ const members: Routes = [
     resolve: { savedProfile: profileResolver },
     data: feed(),
   },
+  {
+    path: 'admin/videos',
+    title: 'Vídeos do Reels · wannawatch?',
+    loadComponent: () =>
+      import('./features/admin-videos/admin-videos-page').then((m) => m.AdminVideosPage),
+    canActivate: [requireAdmin],
+    data: feed(),
+  },
   ...(isDevMode()
     ? [
         {
           path: 'dev/componentes',
           title: 'Componentes · wannawatch?',
           loadComponent: () => import('./features/dev/ui-catalog').then((m) => m.UiCatalog),
-          data: feed(),
-        },
-        {
-          path: 'dev/videos',
-          title: 'Vídeos do Reels · wannawatch?',
-          loadComponent: () => import('./features/dev/video-review').then((m) => m.VideoReview),
           data: feed(),
         },
       ]

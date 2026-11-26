@@ -1,7 +1,14 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { ChangeDetectionStrategy, Component, computed, DestroyRef, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  DestroyRef,
+  inject,
+  signal,
+} from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { catchError, map, of } from 'rxjs';
 import { CatalogApi } from '../../core/api/catalog-api';
 import { Profile, TitleCard, UserRef } from '../../core/api/models';
@@ -26,7 +33,7 @@ const NAME_MAX = 40;
  */
 @Component({
   selector: 'ww-settings-page',
-  imports: [Avatar, Button, Icon, FavoriteTitlePicker],
+  imports: [RouterLink, Avatar, Button, Icon, FavoriteTitlePicker],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './settings-page.html',
   styleUrl: './settings-page.css',
@@ -40,6 +47,7 @@ export class SettingsPage {
   private readonly route = inject(ActivatedRoute);
   private readonly destroyRef = inject(DestroyRef);
 
+  protected readonly isAdmin = this.auth.isAdmin;
   protected readonly colors = USER_COLORS;
   protected readonly mascots = BU_MASCOTS;
   protected readonly nameMax = NAME_MAX;
@@ -61,7 +69,9 @@ export class SettingsPage {
 
   protected readonly genres = toSignal(
     this.catalog.genres().pipe(
-      map((all) => all.filter((g) => g.titleCount > 0).sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'))),
+      map((all) =>
+        all.filter((g) => g.titleCount > 0).sort((a, b) => a.name.localeCompare(b.name, 'pt-BR')),
+      ),
       catchError(() => of([])),
     ),
     { initialValue: [] },
@@ -71,9 +81,16 @@ export class SettingsPage {
   protected readonly preview = computed<UserRef | null>(() => {
     const p = this.profile();
     if (!p) return null;
-    return { ...p.user, displayName: this.cleanName() || p.user.displayName, color: this.color(), mascot: this.mascotToSave() };
+    return {
+      ...p.user,
+      displayName: this.cleanName() || p.user.displayName,
+      color: this.color(),
+      mascot: this.mascotToSave(),
+    };
   });
-  protected readonly previewPhoto = computed(() => (this.avatar() === 'photo' ? this.photo() : null));
+  protected readonly previewPhoto = computed(() =>
+    this.avatar() === 'photo' ? this.photo() : null,
+  );
 
   private readonly cleanName = computed(() => this.name().trim().replace(/\s+/g, ' '));
   /** Com foto, o Bu salvo continua valendo para os amigos (a foto ainda é só deste aparelho). */
@@ -82,7 +99,9 @@ export class SettingsPage {
     return typeof a === 'number' ? a : a === 'photo' ? (this.profile()?.user.mascot ?? null) : null;
   });
 
-  protected readonly nameError = computed(() => (this.cleanName() ? null : 'Seu nome não pode ficar vazio.'));
+  protected readonly nameError = computed(() =>
+    this.cleanName() ? null : 'Seu nome não pode ficar vazio.',
+  );
 
   protected readonly dirty = computed(() => {
     const p = this.profile();
@@ -174,7 +193,10 @@ export class SettingsPage {
         error: (e: HttpErrorResponse) => {
           this.saving.set(false);
           const detail = typeof e.error?.detail === 'string' ? e.error.detail : null;
-          this.status.set({ kind: 'error', text: detail ?? 'Não deu pra salvar agora. Tenta de novo?' });
+          this.status.set({
+            kind: 'error',
+            text: detail ?? 'Não deu pra salvar agora. Tenta de novo?',
+          });
         },
       });
   }

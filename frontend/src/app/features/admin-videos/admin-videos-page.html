@@ -1,0 +1,175 @@
+<header class="intro">
+  <p class="eyebrow">Admin · experimento</p>
+  <h1>Vídeos do Reels</h1>
+  <p class="lead">
+    Shorts achados no YouTube para os títulos mais populares. Os aprovados entram no Reels; os
+    vídeos não são baixados, tocam pelo player do YouTube.
+  </p>
+</header>
+
+<dl class="stats">
+  <div>
+    <dt>Na fila</dt>
+    <dd>{{ stats().pending }}</dd>
+  </div>
+  <div>
+    <dt>Aprovados</dt>
+    <dd class="ok">{{ stats().approved }}</dd>
+  </div>
+  <div>
+    <dt>Reprovados</dt>
+    <dd class="bad">{{ stats().rejected }}</dd>
+  </div>
+  <div>
+    <dt>Títulos buscados</dt>
+    <dd>{{ stats().titles }}</dd>
+  </div>
+</dl>
+
+<div class="tabs" role="tablist" aria-label="Revisão dos vídeos" (keydown)="onTabKey($event)">
+  <span class="tab-thumb" aria-hidden="true" [class.right]="tab() === 'history'"></span>
+  @for (t of tabs; track t.id) {
+    <button
+      #tabBtn
+      type="button"
+      role="tab"
+      [id]="'tab-' + t.id"
+      [attr.aria-selected]="tab() === t.id"
+      [attr.aria-controls]="'panel-' + t.id"
+      [tabIndex]="tab() === t.id ? 0 : -1"
+      (click)="tab.set(t.id)"
+    >
+      {{ t.label }}
+      <span class="count">{{ t.id === 'review' ? stats().pending : stats().reviewed }}</span>
+    </button>
+  }
+</div>
+
+<p class="status" role="status">{{ message() }}</p>
+
+@if (tab() === 'review') {
+  <div
+    class="panel"
+    id="panel-review"
+    role="tabpanel"
+    aria-labelledby="tab-review"
+    animate.enter="panel-in"
+  >
+    <ww-discover-form [busy]="busy()" (search)="discover($event)" />
+
+    @if (loading()) {
+      <ul class="grid" aria-hidden="true">
+        @for (i of skeletons; track i) {
+          <li class="skeleton"></li>
+        }
+      </ul>
+    } @else {
+      @for (g of queue(); track g.titleId) {
+        <section class="group" [attr.aria-labelledby]="'t-' + g.titleId" animate.leave="group-out">
+          <div class="group-head">
+            <ww-poster
+              class="mini"
+              [image]="g.poster"
+              [title]="g.title"
+              [seed]="g.titleId"
+              [showTitle]="false"
+            />
+            <div class="group-text">
+              <h2 [id]="'t-' + g.titleId">
+                {{ g.title }}
+                @if (g.year) {
+                  <span class="year">{{ g.year }}</span>
+                }
+              </h2>
+              <p>
+                <span class="chip">{{ g.mediaType === 'SERIES' ? 'Série' : 'Filme' }}</span>
+                {{ g.pending.length }} na fila · busca “{{ g.query }}”
+              </p>
+            </div>
+            @if (g.pending.length > 1) {
+              <button wwButton variant="soft" size="sm" type="button" (click)="rejectAll(g)">
+                Reprovar todos
+              </button>
+            }
+          </div>
+          <ul class="grid ww-stagger">
+            @for (v of g.pending; track v.id) {
+              <li animate.leave="card-out">
+                <ww-video-card [video]="v" (decide)="decide(v, g.title, $event)" />
+              </li>
+            }
+          </ul>
+        </section>
+      } @empty {
+        <div class="empty" animate.enter="panel-in">
+          <span class="empty-icon"><ww-icon name="check" [size]="28" /></span>
+          <h2>Fila vazia</h2>
+          <p>
+            Tudo revisado por aqui. Busque mais títulos acima ou confira o que já passou no
+            histórico.
+          </p>
+        </div>
+      }
+    }
+  </div>
+} @else {
+  <div
+    class="panel"
+    id="panel-history"
+    role="tabpanel"
+    aria-labelledby="tab-history"
+    animate.enter="panel-in"
+  >
+    <div class="filters">
+      <ww-segmented label="Filtrar por decisão" [options]="filterOptions" [(value)]="filter" />
+      <label class="search">
+        <ww-icon name="search" [size]="18" />
+        <span class="visually-hidden">Buscar no histórico</span>
+        <input
+          type="search"
+          placeholder="Título, vídeo ou canal"
+          [value]="query()"
+          (input)="query.set($any($event.target).value)"
+        />
+      </label>
+    </div>
+
+    @if (history().length) {
+      <p class="found">{{ history().length }} vídeo(s)</p>
+      <ul class="grid ww-stagger">
+        @for (h of history(); track h.video.id) {
+          <li animate.leave="card-out">
+            <ww-video-card
+              mode="history"
+              [video]="h.video"
+              [label]="h.title"
+              (decide)="decide(h.video, h.title, $event)"
+            />
+          </li>
+        }
+      </ul>
+    } @else if (!loading()) {
+      <div class="empty" animate.enter="panel-in">
+        <span class="empty-icon"><ww-icon name="list" [size]="28" /></span>
+        <h2>Nada por aqui</h2>
+        <p>
+          {{
+            stats().reviewed
+              ? 'Nenhum vídeo com esse filtro.'
+              : 'Os vídeos aprovados e reprovados aparecem aqui.'
+          }}
+        </p>
+      </div>
+    }
+  </div>
+}
+
+@if (toast(); as t) {
+  <ww-undo-toast
+    [text]="t.text"
+    (undo)="undo(t)"
+    animate.enter="toast-in"
+    animate.leave="toast-out"
+  />
+}
+<p class="visually-hidden" aria-live="polite">{{ toast()?.text }}</p>

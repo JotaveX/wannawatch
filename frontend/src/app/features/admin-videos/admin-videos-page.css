@@ -1,0 +1,304 @@
+:host {
+  --ok: #1f7a3a;
+  display: block;
+  width: min(100%, 1180px);
+  margin: 0 auto;
+  padding: var(--ww-space-10) var(--ww-page-x) var(--ww-space-14);
+}
+h1,
+h2,
+p {
+  margin: 0;
+}
+.eyebrow {
+  color: var(--link);
+  font-size: 13px;
+  font-weight: 700;
+}
+h1 {
+  margin-top: var(--ww-space-1);
+  font: 800 clamp(32px, 5vw, 44px) / 1.05 var(--ww-font-display);
+  letter-spacing: var(--ww-tracking-display);
+}
+.lead {
+  max-width: 60ch;
+  margin-top: var(--ww-space-3);
+  color: var(--text-2);
+}
+
+/* --- números --- */
+.stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: var(--ww-space-3);
+  margin: var(--ww-space-8) 0;
+}
+.stats div {
+  padding: var(--ww-space-4);
+  border: var(--ww-hairline) solid var(--border);
+  border-radius: var(--ww-radius-lg);
+  background: var(--surface);
+}
+dt {
+  color: var(--text-2);
+  font-size: 13px;
+  font-weight: 600;
+}
+dd {
+  margin: var(--ww-space-1) 0 0;
+  font: 800 30px / 1 var(--ww-font-display);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: var(--ww-tracking-display);
+}
+dd.ok {
+  color: var(--ok);
+}
+dd.bad {
+  color: var(--ww-pink-strong);
+}
+
+/* --- abas: o fundo branco desliza até a aba ativa --- */
+.tabs {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  width: min(100%, 420px);
+  padding: 4px;
+  border-radius: var(--ww-radius-pill);
+  background: var(--surface-2);
+}
+.tab-thumb {
+  position: absolute;
+  inset: 4px auto 4px 4px;
+  width: calc(50% - 4px);
+  border-radius: var(--ww-radius-pill);
+  background: var(--surface);
+  box-shadow: var(--ww-shadow-segment);
+  transition: transform var(--ww-slow) var(--ww-ease-out);
+}
+.tab-thumb.right {
+  transform: translateX(100%);
+}
+[role='tab'] {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--ww-space-2);
+  min-height: var(--ww-touch);
+  border: 0;
+  border-radius: var(--ww-radius-pill);
+  background: none;
+  color: var(--text-2);
+  font: 600 15px var(--ww-font-ui);
+  cursor: pointer;
+  transition: color var(--ww-medium) var(--ww-ease-out);
+}
+[role='tab'][aria-selected='true'] {
+  color: var(--text);
+}
+[role='tab']:focus-visible {
+  outline: 3px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+.count {
+  min-width: 24px;
+  padding: 1px 7px;
+  border-radius: var(--ww-radius-pill);
+  background: var(--hover);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+[aria-selected='true'] .count {
+  background: var(--ww-graphite);
+  color: var(--ww-white);
+}
+.status {
+  min-height: 1.5em;
+  margin: var(--ww-space-3) 0;
+  color: var(--text-2);
+  font-size: 14px;
+}
+
+.found {
+  color: var(--text-2);
+  font-size: 14px;
+}
+
+/* --- fila por título --- */
+.group {
+  margin-top: var(--ww-space-10);
+}
+.group-head {
+  display: flex;
+  align-items: center;
+  gap: var(--ww-space-3);
+  margin-bottom: var(--ww-space-4);
+}
+.mini {
+  flex: none;
+  width: 44px;
+  border-radius: var(--ww-radius-xs);
+  overflow: hidden;
+}
+.group-text {
+  flex: 1;
+  min-width: 0;
+}
+.group h2 {
+  font: 700 20px / 1.2 var(--ww-font-display);
+  letter-spacing: -0.01em;
+}
+.year {
+  color: var(--text-2);
+  font-weight: 500;
+}
+.group-text p {
+  margin-top: 2px;
+  overflow: hidden;
+  color: var(--text-2);
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.chip {
+  margin-right: 4px;
+  padding: 1px 8px;
+  border-radius: var(--ww-radius-pill);
+  background: var(--surface-2);
+  color: var(--text);
+  font-weight: 600;
+}
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: var(--ww-space-4);
+  margin: var(--ww-space-4) 0 0;
+  padding: 0;
+  list-style: none;
+}
+.skeleton {
+  aspect-ratio: 9 / 19;
+  border-radius: var(--ww-radius-lg);
+  background: var(--surface-2);
+  animation: pulse 1.2s var(--ww-ease) infinite alternate;
+}
+
+/* --- histórico --- */
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--ww-space-3);
+  margin-bottom: var(--ww-space-3);
+}
+.search {
+  display: flex;
+  flex: 1 1 220px;
+  align-items: center;
+  gap: var(--ww-space-2);
+  min-height: var(--ww-touch);
+  padding: 0 var(--ww-space-4);
+  border: var(--ww-hairline) solid var(--border);
+  border-radius: var(--ww-radius-pill);
+  background: var(--surface);
+  color: var(--text-2);
+}
+.search:focus-within {
+  border-color: var(--text);
+}
+.search input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: none;
+  color: var(--text);
+  font: inherit;
+}
+
+/* --- vazio --- */
+.empty {
+  display: grid;
+  justify-items: center;
+  gap: var(--ww-space-2);
+  margin-top: var(--ww-space-8);
+  padding: var(--ww-space-10) var(--ww-space-4);
+  border: var(--ww-hairline) dashed var(--border);
+  border-radius: var(--ww-radius-lg);
+  text-align: center;
+}
+.empty h2 {
+  font: 700 20px var(--ww-font-display);
+}
+.empty p {
+  max-width: 44ch;
+  color: var(--text-2);
+}
+.empty-icon {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--surface-2);
+}
+
+/* --- aviso com desfazer (o visual fica no ww-undo-toast) --- */
+ww-undo-toast {
+  position: fixed;
+  z-index: 20;
+  left: 50%;
+  bottom: calc(var(--ww-tabbar-h) + var(--ww-space-4));
+  transform: translateX(-50%);
+}
+@media (min-width: 1024px) {
+  ww-undo-toast {
+    bottom: var(--ww-space-8);
+  }
+}
+
+/* --- animações (classes do animate.enter / animate.leave) --- */
+.panel-in {
+  animation: rise var(--ww-slow) var(--ww-ease-out);
+}
+.card-out {
+  animation: card-out var(--ww-medium) var(--ww-ease) forwards;
+}
+.group-out {
+  animation: fade-out var(--ww-medium) var(--ww-ease) forwards;
+}
+.toast-in {
+  animation: toast-in var(--ww-medium) var(--ww-ease-spring);
+}
+.toast-out {
+  animation: fade-out var(--ww-fast) var(--ww-ease) forwards;
+}
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+}
+@keyframes card-out {
+  to {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+}
+@keyframes fade-out {
+  to {
+    opacity: 0;
+  }
+}
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 16px);
+  }
+}
+@keyframes pulse {
+  to {
+    opacity: 0.45;
+  }
+}

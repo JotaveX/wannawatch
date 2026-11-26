@@ -28,6 +28,12 @@ export const requireSignupDone: CanActivateFn = (_route, state) => {
   });
 };
 
+/** Telas de administrador: quem não é admin volta para o início. */
+export const requireAdmin: CanActivateFn = () => {
+  if (inject(AuthStore).isAdmin()) return true;
+  return inject(Router).createUrlTree(['/']);
+};
+
 /** Quem já entrou não precisa ver a tela de login. */
 export const guestOnly: CanActivateFn = () => {
   if (!inject(AuthStore).loggedIn()) return true;

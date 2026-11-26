@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { AuthStore } from '../core/auth/auth-store';
 import { Avatar } from '../shared/ui/avatar';
@@ -6,7 +6,7 @@ import { Button } from '../shared/ui/button';
 import { Icon } from '../shared/ui/icon';
 import { Logo } from '../shared/ui/logo';
 import { ActiveSlider } from './active-slider';
-import { SIDE_ITEMS } from './nav-items';
+import { ADMIN_ITEM, SIDE_ITEMS } from './nav-items';
 
 /** Barra lateral do desktop, no Swipe, no Reels e nas telas secundárias (estilo TikTok web). */
 @Component({
@@ -33,7 +33,7 @@ import { SIDE_ITEMS } from './nav-items';
         [style.transform]="'translateY(' + (slider.box()?.y ?? 0) + 'px)'"
         [style.height.px]="slider.box()?.h ?? 0"
       ></span>
-      @for (item of items; track item.path) {
+      @for (item of items(); track item.path) {
         <a
           #link
           [routerLink]="item.path"
@@ -269,9 +269,11 @@ import { SIDE_ITEMS } from './nav-items';
   `,
 })
 export class SideNav {
-  protected readonly items = SIDE_ITEMS;
-  protected readonly slider = new ActiveSlider();
   protected readonly auth = inject(AuthStore);
+  protected readonly items = computed(() =>
+    this.auth.isAdmin() ? [...SIDE_ITEMS, ADMIN_ITEM] : SIDE_ITEMS,
+  );
+  protected readonly slider = new ActiveSlider();
   private readonly router = inject(Router);
 
   protected logout(): void {
