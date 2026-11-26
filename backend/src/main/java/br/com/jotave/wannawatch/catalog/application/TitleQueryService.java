@@ -13,6 +13,7 @@ import br.com.jotave.wannawatch.catalog.domain.MediaType;
 import br.com.jotave.wannawatch.catalog.domain.Title;
 import br.com.jotave.wannawatch.catalog.domain.TitleDetails;
 import br.com.jotave.wannawatch.catalog.domain.TitleRepository;
+import br.com.jotave.wannawatch.recommendation.application.TitleFeatureIndexHolder;
 import br.com.jotave.wannawatch.shared.web.NotFoundException;
 import br.com.jotave.wannawatch.shared.web.PageResponse;
 import java.util.ArrayList;
@@ -33,8 +34,11 @@ public class TitleQueryService {
     private final TitleCards cards;
     private final TitleRepository titles;
     private final ImageUrls images;
+    private final TitleFeatureIndexHolder index;
 
-    public TitleQueryService(JdbcClient jdbc, TitleCards cards, TitleRepository titles, ImageUrls images) {
+    public TitleQueryService(JdbcClient jdbc, TitleCards cards, TitleRepository titles, ImageUrls images,
+                             TitleFeatureIndexHolder index) {
+        this.index = index;
         this.jdbc = jdbc;
         this.cards = cards;
         this.titles = titles;
@@ -117,8 +121,13 @@ public class TitleQueryService {
                 cards.load(similarIds(id, t.getMediaType(), SIMILAR_LIMIT)));
     }
 
-    /** Títulos com mais gêneros em comum; desempata preferindo o mesmo tipo e depois a popularidade. */
+    /**
+     * Os mais parecidos pelo índice de recomendação (gêneros, pessoas, keywords, idioma, época).
+     * Se o título ainda não estiver no índice (acabou de chegar), cai na regra antiga: mais gêneros
+     * em comum, preferindo o mesmo tipo e depois a popularidade.
+     */
     public List<Long> similarIds(long id, MediaType type, int limit) {
+        if (index.get().contains(id)) return index.get().topSimilar(id, limit);
         return jdbc.sql("""
                 SELECT t.id
                 FROM title t JOIN title_genre tg ON tg.title_id = t.id

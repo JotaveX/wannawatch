@@ -12,6 +12,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import br.com.jotave.wannawatch.TestcontainersConfiguration;
+import br.com.jotave.wannawatch.recommendation.application.TitleFeatureIndexHolder;
 import com.jayway.jsonpath.JsonPath;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -49,6 +50,7 @@ class CatalogApiIntegrationTest {
 
     @Autowired MockMvc mvc;
     @Autowired JdbcClient jdbc;
+    @Autowired TitleFeatureIndexHolder indexHolder;
 
     long t1, t2, t3, t4, t5, t6, t7;
 
@@ -75,6 +77,8 @@ class CatalogApiIntegrationTest {
 
         rank("trending_day", t3, t1, t2);
         rank("top_movie", t5, t1);
+        // o catálogo foi montado direto no banco: o índice de recomendação precisa saber
+        indexHolder.rebuild();
     }
 
     @Nested

@@ -75,3 +75,53 @@ wannawatch:
       "10766": Novela
       "10767": Talk show
       "10768": Guerra e política
+
+# ---------------------------------------------------------------------------
+# Recomendação (baseada em conteúdo; pesos são pontos de partida)
+# ---------------------------------------------------------------------------
+  recommendation:
+    # peso de cada família no vetor do título (cada família é normalizada antes)
+    features:
+      genre: 3.0
+      keyword: 2.0
+      direction: 2.0          # Director / Creator
+      writing: 1.0            # Writer / Screenplay / Story / Novel
+      cast: 1.0
+      other-crew: 0.3         # Composer / Director of Photography
+      language: 0.5
+      decade: 0.3
+      type: 0.3
+      genre-position-decay: 0.5   # gênero na posição p vale 1 / (1 + 0.5·p)
+      cast-top-billing: 5         # credit_order < 5 = protagonista
+      cast-top-weight: 1.0
+      cast-rest-weight: 0.5
+      min-document-frequency: 2   # pessoa/keyword em menos títulos que isso é descartada
+    # peso de cada interação no perfil (negativos vão para o perfil negativo)
+    signals:
+      favorite-title: 1.5     # sem decaimento
+      like: 1.0
+      saved: 0.8
+      match-yes: 0.6
+      maybe: 0.3
+      seen: 0.0               # só tira dos feeds
+      pass: -0.4
+      match-no: -0.5
+      favorite-genre: 1.0
+      half-life-days: 90
+    scoring:
+      affinity: 0.70
+      popularity: 0.15
+      quality: 0.15
+      negative-factor: 0.5    # affinity = cos(positivo) − 0.5·cos(negativo)
+      cold-start-signals: 5   # com menos sinais positivos, puxa para popularidade
+      cold-popularity: 0.5
+      cold-quality: 0.3
+      cold-favorite-genre: 0.2
+    tmdb-recommendation-bonus: 0.1
+    quality-prior-votes: 200  # "m" da média bayesiana
+    reason-similarity: 0.35   # mínimo para "Porque você curtiu X"
+    diversity:
+      window: 10
+      max-per-genre: 3
+    maybe-cooldown: 7d
+    cache-ttl: 10m
