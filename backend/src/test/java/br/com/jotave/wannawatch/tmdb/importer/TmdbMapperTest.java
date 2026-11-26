@@ -6,6 +6,7 @@ import br.com.jotave.wannawatch.catalog.domain.CreditType;
 import br.com.jotave.wannawatch.catalog.domain.MediaType;
 import br.com.jotave.wannawatch.catalog.domain.TitleDetails;
 import br.com.jotave.wannawatch.tmdb.TmdbFixtures;
+import br.com.jotave.wannawatch.tmdb.client.TmdbDto;
 import java.time.LocalDate;
 import java.util.List;
 import org.junit.jupiter.api.Nested;
@@ -84,6 +85,51 @@ class TmdbMapperTest {
     }
 
     @Nested
+    class KeywordsERecomendacoes {
+
+        private final ImportedTitle movie = mapper.fromMovie(TmdbFixtures.movie101());
+        private final ImportedTitle tv = mapper.fromTv(TmdbFixtures.tv202());
+
+        @Test
+        void filmeLeKeywordsDeKeywordsSemRepetirNemVazias() {
+            assertThat(movie.keywords()).extracting(ImportedTitle.Keyword::id).containsExactly(9882, 3801, 310);
+            assertThat(movie.keywords().getFirst().name()).isEqualTo("space");
+        }
+
+        @Test
+        void serieLeKeywordsDeResults() {
+            assertThat(tv.keywords()).extracting(ImportedTitle.Keyword::id).containsExactly(6270, 9882);
+        }
+
+        @Test
+        void recomendacoesNaOrdemDaTmdbSemAdulto() {
+            assertThat(movie.recommendations()).containsExactly(
+                    new ImportedTitle.Recommendation(404, MediaType.MOVIE),
+                    new ImportedTitle.Recommendation(505, MediaType.MOVIE));
+        }
+
+        @Test
+        void recomendacaoSemTipoUsaOTipoDoTitulo() {
+            assertThat(tv.recommendations()).containsExactly(
+                    new ImportedTitle.Recommendation(303, MediaType.SERIES),
+                    new ImportedTitle.Recommendation(101, MediaType.SERIES));
+        }
+
+        @Test
+        void guardaNoMaximoVinteKeywords() {
+            List<TmdbDto.Keyword> many = java.util.stream.IntStream.range(0, 30)
+                    .mapToObj(i -> new TmdbDto.Keyword(i, "k" + i)).toList();
+            assertThat(TmdbMapper.keywords(new TmdbDto.Keywords(many, null))).hasSize(20);
+        }
+
+        @Test
+        void semOsBlocosFicaVazio() {
+            assertThat(TmdbMapper.keywords(null)).isEmpty();
+            assertThat(TmdbMapper.recommendations(null, MediaType.MOVIE)).isEmpty();
+        }
+    }
+
+    @Nested
     class Serie {
 
         private final ImportedTitle tv = mapper.fromTv(TmdbFixtures.tv202());
@@ -141,7 +187,7 @@ class TmdbMapperTest {
                 original.backdropPath(), original.voteAverage(), original.voteCount(), original.popularity(),
                 original.adult(), original.genres(), original.productionCompanies(), original.productionCountries(),
                 original.networks(), original.createdBy(), original.contentRatings(), original.videos(),
-                original.credits(), null, original.watchProviders());
+                original.credits(), null, original.watchProviders(), original.keywords(), original.recommendations());
         assertThat(mapper.fromTv(semTraducao).overview()).isNull();
     }
 

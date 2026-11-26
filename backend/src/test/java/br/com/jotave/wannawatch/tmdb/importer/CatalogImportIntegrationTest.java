@@ -19,9 +19,12 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.context.event.ApplicationEvents;
+import org.springframework.test.context.event.RecordApplicationEvents;
 
 /** Importação ponta a ponta contra um Postgres real, com a TMDB simulada pelas fixtures. */
 @SpringBootTest
+@RecordApplicationEvents
 @Import(TestcontainersConfiguration.class)
 class CatalogImportIntegrationTest {
 
@@ -34,9 +37,12 @@ class CatalogImportIntegrationTest {
     @Autowired
     JdbcClient jdbc;
 
+    @Autowired
+    ApplicationEvents events;
+
     @BeforeEach
     void setUp() {
-        jdbc.sql("TRUNCATE title, genre, person RESTART IDENTITY CASCADE").update();
+        jdbc.sql("TRUNCATE title, genre, person, keyword RESTART IDENTITY CASCADE").update();
 
         when(tmdb.movieGenres()).thenReturn(TmdbFixtures.read("genres-movie.json", TmdbDto.GenreList.class));
         when(tmdb.tvGenres()).thenReturn(TmdbFixtures.read("genres-tv.json", TmdbDto.GenreList.class));
@@ -93,6 +99,16 @@ class CatalogImportIntegrationTest {
                 SELECT t.external_id FROM title_ranking r JOIN title t ON t.id = r.title_id
                 WHERE r.list_key = 'trending_day' ORDER BY r.position""").query(Integer.class).list())
                 .containsExactly(202, 101);
+
+        // Keywords (a "space" é dos dois títulos e vira uma linha só) e recomendações da TMDB
+        assertThat(jdbc.sql("SELECT count(*) FROM keyword").query(Integer.class).single()).isEqualTo(4);
+        assertThat(jdbc.sql("SELECT count(*) FROM title_keyword").query(Integer.class).single()).isEqualTo(5);
+        assertThat(jdbc.sql("""
+                SELECT r.external_id FROM title_tmdb_recommendation r JOIN title t ON t.id = r.title_id
+                WHERE t.external_id = 101 ORDER BY r.position""").query(Integer.class).list())
+                .containsExactly(404, 505);
+
+        assertThat(events.stream(CatalogImportedEvent.class)).hasSize(1);
     }
 
     @Test
@@ -117,7 +133,9 @@ class CatalogImportIntegrationTest {
         return jdbc.sql("""
                 SELECT (SELECT count(*) FROM title) titles, (SELECT count(*) FROM genre) genres,
                        (SELECT count(*) FROM title_genre) title_genres, (SELECT count(*) FROM person) people,
-                       (SELECT count(*) FROM title_credit) credits, (SELECT count(*) FROM title_ranking) rankings
+                       (SELECT count(*) FROM title_credit) credits, (SELECT count(*) FROM title_ranking) rankings,
+                       (SELECT count(*) FROM keyword) keywords, (SELECT count(*) FROM title_keyword) title_keywords,
+                       (SELECT count(*) FROM title_tmdb_recommendation) recommendations
                 """).query().singleRow();
     }
 

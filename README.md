@@ -159,7 +159,12 @@ Regras:
 - Classificação indicativa e "onde assistir" só do Brasil; se não houver, ficam vazios.
 - Trailer: YouTube, oficial, preferindo pt e depois en.
 - Conteúdo adulto é ignorado.
+- Também vêm até 20 keywords por título e a lista de recomendações da TMDB (guardada pelo id da
+  TMDB, mesmo quando o recomendado não está no catálogo). As duas alimentam a recomendação.
 - A importação é idempotente: rodar de novo atualiza os títulos, não duplica.
+- **Não trunque `title` para reimportar.** Curtidas (`title_like`) e sinais (`user_title_signal`)
+  caem em cascata junto. Para atualizar o catálogo, basta rodar a importação de novo. O log de
+  interações (`interaction_event`) sobrevive, mas as curtidas e os sinais não voltam sozinhos.
 - Limite de 20 requisições/s à TMDB, com novas tentativas em 429/5xx.
 
 ### Atribuição

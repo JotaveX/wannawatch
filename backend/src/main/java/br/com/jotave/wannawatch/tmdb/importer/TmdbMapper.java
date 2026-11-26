@@ -30,6 +30,8 @@ import java.util.stream.Stream;
 public class TmdbMapper {
 
     static final int MAX_CAST = 15;
+    static final int MAX_KEYWORDS = 20;
+    static final int MAX_RECOMMENDATIONS = 20;
 
     /** Funções da equipe que guardamos, na ordem em que aparecem na página de detalhes. */
     static final List<String> CREW_JOBS = List.of(
@@ -79,7 +81,9 @@ public class TmdbMapper {
                         companies(m.productionCompanies()),
                         countries(m.productionCountries()),
                         List.of(),
-                        watchProviders(m.watchProviders())));
+                        watchProviders(m.watchProviders())),
+                keywords(m.keywords()),
+                recommendations(m.recommendations(), MediaType.MOVIE));
     }
 
     public ImportedTitle fromTv(TmdbDto.TvDetails t) {
@@ -115,7 +119,42 @@ public class TmdbMapper {
                         companies(t.productionCompanies()),
                         countries(t.productionCountries()),
                         companies(t.networks()),
-                        watchProviders(t.watchProviders())));
+                        watchProviders(t.watchProviders())),
+                keywords(t.keywords()),
+                recommendations(t.recommendations(), MediaType.SERIES));
+    }
+
+    /** Até {@value #MAX_KEYWORDS} keywords, na ordem da TMDB e sem repetir. */
+    static List<ImportedTitle.Keyword> keywords(TmdbDto.Keywords keywords) {
+        if (keywords == null) return List.of();
+        Set<Integer> seen = new LinkedHashSet<>();
+        List<ImportedTitle.Keyword> out = new ArrayList<>();
+        for (TmdbDto.Keyword k : keywords.all()) {
+            if (out.size() == MAX_KEYWORDS) break;
+            if (k == null || k.id() == null || text(k.name()) == null || !seen.add(k.id())) continue;
+            out.add(new ImportedTitle.Keyword(k.id(), k.name().trim()));
+        }
+        return out;
+    }
+
+    /**
+     * Até {@value #MAX_RECOMMENDATIONS} recomendações, sem conteúdo adulto. A TMDB às vezes omite
+     * o {@code media_type} nas recomendações: aí vale o tipo do próprio título.
+     */
+    static List<ImportedTitle.Recommendation> recommendations(TmdbDto.Page<TmdbDto.ListItem> page, MediaType own) {
+        if (page == null || page.results() == null) return List.of();
+        Set<String> seen = new LinkedHashSet<>();
+        List<ImportedTitle.Recommendation> out = new ArrayList<>();
+        for (TmdbDto.ListItem item : page.results()) {
+            if (out.size() == MAX_RECOMMENDATIONS) break;
+            if (item == null || item.id() == null || Boolean.TRUE.equals(item.adult())) continue;
+            MediaType type = "movie".equals(item.mediaType()) ? MediaType.MOVIE
+                    : "tv".equals(item.mediaType()) ? MediaType.SERIES
+                    : item.mediaType() == null ? own : null;
+            if (type == null || !seen.add(type + ":" + item.id())) continue;
+            out.add(new ImportedTitle.Recommendation(item.id(), type));
+        }
+        return out;
     }
 
     /** "Ficção científica" → "ficcao-cientifica"; "Action & Adventure" → "action-e-adventure". */

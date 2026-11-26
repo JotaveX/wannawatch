@@ -52,7 +52,9 @@ public final class TmdbDto {
             Videos videos,
             Credits credits,
             Translations translations,
-            @JsonProperty("watch/providers") WatchProviders watchProviders) {}
+            @JsonProperty("watch/providers") WatchProviders watchProviders,
+            Keywords keywords,
+            Page<ListItem> recommendations) {}
 
     public record TvDetails(
             Integer id,
@@ -81,7 +83,19 @@ public final class TmdbDto {
             Videos videos,
             Credits credits,
             Translations translations,
-            @JsonProperty("watch/providers") WatchProviders watchProviders) {}
+            @JsonProperty("watch/providers") WatchProviders watchProviders,
+            Keywords keywords,
+            Page<ListItem> recommendations) {}
+
+    /** Filmes mandam a lista em {@code keywords}; séries, em {@code results}. */
+    public record Keywords(List<Keyword> keywords, List<Keyword> results) {
+
+        public List<Keyword> all() {
+            return keywords != null ? keywords : results != null ? results : List.of();
+        }
+    }
+
+    public record Keyword(Integer id, String name) {}
 
     public record ReleaseDates(List<CountryReleaseDates> results) {}
 

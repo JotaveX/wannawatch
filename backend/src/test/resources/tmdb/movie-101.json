@@ -68,5 +68,24 @@
         "rent": [{ "provider_name": "Apple TV", "logo_path": "/apple.png", "display_priority": 5 }]
       }
     }
+  },
+  "keywords": {
+    "keywords": [
+      { "id": 9882, "name": "space" },
+      { "id": 3801, "name": "mars" },
+      { "id": 9882, "name": "space" },
+      { "id": 4565, "name": " " },
+      { "id": 310, "name": "survival" }
+    ]
+  },
+  "recommendations": {
+    "page": 1,
+    "results": [
+      { "id": 404, "media_type": "movie", "adult": false, "popularity": 10.0 },
+      { "id": 909, "media_type": "movie", "adult": true, "popularity": 5.0 },
+      { "id": 505, "media_type": "movie", "adult": false, "popularity": 3.0 }
+    ],
+    "total_pages": 1,
+    "total_results": 3
   }
 }

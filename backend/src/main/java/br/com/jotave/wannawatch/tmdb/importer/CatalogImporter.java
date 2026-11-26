@@ -20,6 +20,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
 /**
@@ -37,11 +38,14 @@ public class CatalogImporter {
     private final ImportProperties props;
     private final CatalogWriter writer;
     private final TmdbMapper mapper;
+    private final ApplicationEventPublisher events;
 
     private final AtomicBoolean running = new AtomicBoolean(false);
     private final AtomicReference<ImportResult> lastResult = new AtomicReference<>();
 
-    public CatalogImporter(TmdbClient tmdb, TmdbProperties tmdbProps, ImportProperties props, CatalogWriter writer) {
+    public CatalogImporter(TmdbClient tmdb, TmdbProperties tmdbProps, ImportProperties props, CatalogWriter writer,
+                           ApplicationEventPublisher events) {
+        this.events = events;
         this.tmdb = tmdb;
         this.tmdbProps = tmdbProps;
         this.props = props;
@@ -136,7 +140,10 @@ public class CatalogImporter {
             log.info("Importação concluída: {} títulos gravados, {} pulados, {} com falha, em {} s",
                     saved.size(), skipped, failed,
                     java.time.Duration.between(start, result.finishedAt()).toSeconds());
-            return finish(result);
+            finish(result);
+            // quem depende do catálogo (ex.: o índice de recomendação) se atualiza
+            events.publishEvent(new CatalogImportedEvent(result));
+            return result;
         } catch (RuntimeException ex) {
             log.error("Importação falhou", ex);
             return finish(new ImportResult(ImportResult.Status.FAILED, start, Instant.now(),

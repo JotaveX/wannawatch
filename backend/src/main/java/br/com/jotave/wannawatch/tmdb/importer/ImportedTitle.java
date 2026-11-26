@@ -32,7 +32,14 @@ public record ImportedTitle(
         String trailerYoutubeKey,
         List<Integer> genreExternalIds,
         List<Credit> credits,
-        TitleDetails details) {
+        TitleDetails details,
+        List<Keyword> keywords,
+        List<Recommendation> recommendations) {
+
+    public record Keyword(int id, String name) {}
+
+    /** Título que a TMDB recomenda, na ordem dela (pode não estar no catálogo). */
+    public record Recommendation(int externalId, MediaType mediaType) {}
 
     public record Credit(
             int personExternalId,

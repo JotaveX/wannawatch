@@ -24,8 +24,8 @@ public class TmdbClient {
 
     private static final Logger log = LoggerFactory.getLogger(TmdbClient.class);
 
-    static final String MOVIE_APPEND = "release_dates,videos,credits,translations,watch/providers";
-    static final String TV_APPEND = "content_ratings,videos,credits,translations,watch/providers";
+    static final String MOVIE_APPEND = "release_dates,videos,credits,translations,watch/providers,keywords,recommendations";
+    static final String TV_APPEND = "content_ratings,videos,credits,translations,watch/providers,keywords,recommendations";
 
     private final RestClient http;
     private final TmdbProperties props;

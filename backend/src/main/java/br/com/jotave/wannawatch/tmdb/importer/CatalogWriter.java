@@ -127,6 +127,8 @@ public class CatalogWriter {
                     c.character(), c.job(), c.department(), c.order()));
         }
         credits.saveAll(rows);
+        replaceKeywords(t.getId(), in.keywords());
+        replaceRecommendations(t.getId(), in.recommendations());
         return t.getId();
     }
 
@@ -153,6 +155,30 @@ public class CatalogWriter {
             if (genreId == null) continue; // gênero fora das listas oficiais da TMDB
             jdbc.sql("INSERT INTO title_genre (title_id, genre_id, position) VALUES (:t, :g, :p)")
                     .param("t", titleId).param("g", genreId).param("p", position++).update();
+        }
+    }
+
+    private void replaceKeywords(Long titleId, List<ImportedTitle.Keyword> keywords) {
+        jdbc.sql("DELETE FROM title_keyword WHERE title_id = :id").param("id", titleId).update();
+        for (ImportedTitle.Keyword k : keywords) {
+            jdbc.sql("""
+                    INSERT INTO keyword (id, name) VALUES (:id, :name)
+                    ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name WHERE keyword.name <> EXCLUDED.name""")
+                    .param("id", k.id()).param("name", k.name()).update();
+            jdbc.sql("INSERT INTO title_keyword (title_id, keyword_id) VALUES (:t, :k) ON CONFLICT DO NOTHING")
+                    .param("t", titleId).param("k", k.id()).update();
+        }
+    }
+
+    private void replaceRecommendations(Long titleId, List<ImportedTitle.Recommendation> recommendations) {
+        jdbc.sql("DELETE FROM title_tmdb_recommendation WHERE title_id = :id").param("id", titleId).update();
+        int position = 0;
+        for (ImportedTitle.Recommendation r : recommendations) {
+            jdbc.sql("""
+                    INSERT INTO title_tmdb_recommendation (title_id, position, external_id, media_type)
+                    VALUES (:t, :p, :e, :type)""")
+                    .param("t", titleId).param("p", position++).param("e", r.externalId())
+                    .param("type", r.mediaType().name()).update();
         }
     }
 
