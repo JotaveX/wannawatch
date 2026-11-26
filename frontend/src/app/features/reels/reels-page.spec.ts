@@ -60,6 +60,8 @@ describe('ReelsPage', () => {
     expect(second.querySelectorAll('.sphere').length).toBe(0);
     // sem amigos, o motivo da recomendação ocupa o lugar
     expect(second.querySelector('ww-liked-by .label')?.textContent).toBe('De Christopher Nolan');
+    const described = second.querySelector('article')!.getAttribute('aria-describedby')!;
+    expect(second.querySelector('#' + described)?.textContent).toContain('De Christopher Nolan');
   });
 
   it('J/K e setas navegam e o painel acompanha', async () => {

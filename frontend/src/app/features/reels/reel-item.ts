@@ -23,13 +23,14 @@ import { LikedBy } from './liked-by';
   imports: [RouterLink, Icon, Poster, LikedBy],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <article [attr.aria-labelledby]="'reel-' + card().id">
+    <!-- quem curtiu / motivo da recomendação descreve o reel para leitores de tela -->
+    <article [attr.aria-labelledby]="'reel-' + card().id" [attr.aria-describedby]="'why-' + card().id">
       <ww-poster class="bg" ratio="fill" [image]="card().poster" [widths]="[342, 780]" sizes="480px"
                  [seed]="card().id" [showTitle]="false" [eager]="eager()" />
       <div class="shade" aria-hidden="true"></div>
 
       <div class="text">
-        <ww-liked-by [titleId]="card().id" [reason]="card().reason?.text" />
+        <ww-liked-by [id]="'why-' + card().id" [titleId]="card().id" [reason]="card().reason?.text" />
         <span class="kicker">Sinopse</span>
         <p class="synopsis">{{ card().overview }}</p>
         <div class="name">

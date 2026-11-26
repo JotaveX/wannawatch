@@ -7,6 +7,9 @@ Recomendação de filmes e séries — sozinho ou com a galera. Quatro jeitos de
 - **Reels**: feed vertical de sinopses no estilo TikTok.
 - **Match**: swipe em conjunto numa sala; acaba no primeiro título que todo mundo quiser ver.
 
+Tudo isso é recomendado pelo seu gosto (e, no Match, pelo gosto do grupo), com o motivo escrito no
+card: "Porque você curtiu Dark", "De Christopher Nolan", "Bom pra você e pra Bia".
+
 Além disso: página de detalhes (elenco, equipe, onde assistir no Brasil, ficha técnica) e busca por
 título, elenco e gênero.
 
@@ -91,7 +94,7 @@ Documentação interativa (Swagger): <http://localhost:8081/swagger-ui.html>
 | `POST /api/match/rooms` · `GET /api/match/rooms` | Cria sala (`{ mediaType?, genre? }`) · salas abertas |
 | `GET /api/match/rooms/{code}` · `POST …/join` | Estado da sala · entrar (só enquanto espera) |
 | `POST …/start` · `DELETE /api/match/rooms/{code}` | Dono começa (2+ pessoas) · dono fecha (enquanto espera) |
-| `GET …/deck?cursor=&size=` | Deck da sala, sem o que eu já votei |
+| `GET …/deck?cursor=&size=` | Deck da sala na ordem do grupo, sem o que eu já votei, com o motivo de cada carta |
 | `PUT …/votes/{titleId}` (`{ liked }`) · `DELETE …/votes/{titleId}` | Votar · desfazer voto |
 | `DELETE …/participants/me` | Sair da sala |
 
@@ -229,14 +232,68 @@ Não há cadastro: a migration `V4` cria três contas, todas com a senha `wannaw
 Quem cria escolhe o deck (filmes, séries ou os dois, e opcionalmente um gênero); a sala aparece com o
 nome do dono e um mascote sorteado (`public/mascot/rooms`, a lista fica em `room-mascots.ts` e o
 tamanho dela em `MatchService.MASCOTS`). Quem cria e quem entra ficam na sala de espera, que avisa
-quem entrou e saiu; o dono começa com 2 ou mais pessoas e, a partir daí, ninguém novo entra. Todo
-mundo vota no mesmo deck, na mesma ordem; a sala acaba no primeiro título com "quero ver" de
-**todos** os participantes. Quem sai tem os votos apagados, e isso pode destravar o match para quem
-ficou. O front consulta a sala a cada 2,5 s e a lista de salas a cada 4 s.
+quem entrou e saiu; o dono começa com 2 ou mais pessoas e, a partir daí, ninguém novo entra. Ao
+começar, o deck é ordenado pelo gosto de quem está na sala (veja [Recomendação](#recomendação)) e
+fica guardado (`match_room_deck`): todo mundo vota no mesmo deck, na mesma ordem, e ela não muda
+mais, nem se alguém sair. A sala acaba no primeiro título com "quero ver" de **todos** os
+participantes; se dois títulos virarem unanimidade ao mesmo tempo (quando alguém sai), vence o que
+vem antes no deck. Quem sai tem os votos da sala apagados, e isso pode destravar o match para quem
+ficou (o voto continua no log e contando no gosto da pessoa). Salas que começaram antes do deck
+guardado seguem na ordem aleatória fixa pela seed da sala. O front consulta a sala a cada 2,5 s e a
+lista de salas a cada 4 s.
+
+## Recomendação
+
+Baseada em conteúdo: com poucas centenas de títulos e um punhado de usuários, não há dados para
+filtragem colaborativa. Tudo roda em Java, em memória, sem biblioteca de ML (pontuar o catálogo
+inteiro para alguém leva microssegundos). Os pesos e limiares ficam em
+`wannawatch.recommendation.*` no `application.yml`.
+
+1. **Vetor de cada título** (`TitleFeatureIndex`, remontado ao subir e ao fim de cada importação):
+   gêneros (o principal pesa mais), keywords, direção/criação, roteiro, elenco (protagonistas pesam
+   mais), trilha e fotografia, idioma original, década e tipo. Keywords e elenco são ponderados por
+   IDF, e pessoas ou keywords que aparecem num título só são descartadas. Cada família é
+   normalizada, multiplicada pelo peso dela e somada. Parecido = cosseno, com um bônus quando a
+   TMDB recomenda um a partir do outro (é o que alimenta os "parecidos" da página de detalhes).
+2. **Perfil de gosto**: soma dos vetores do que a pessoa curtiu, salvou, votou "quero ver" no
+   Match, marcou "talvez" e do título favorito (mais o gênero favorito), cada um com seu peso e
+   perdendo metade do peso a cada 90 dias. Passa e "não" no Match montam um perfil negativo. "Já vi"
+   não entra no gosto, só tira o título dos feeds.
+3. **Score individual**: `0,70·afinidade + 0,15·popularidade + 0,15·qualidade`, em que afinidade =
+   cosseno com o perfil positivo − metade do cosseno com o negativo, popularidade = percentil no
+   catálogo e qualidade = média bayesiana da nota. Com menos de 5 sinais positivos, o score puxa
+   para popularidade, qualidade e gênero favorito (cold start).
+4. **Motivo**: "Porque você curtiu X" (se algo curtido ou salvo é parecido o bastante), senão a
+   pessoa ou o gênero que mais pesou ("De Christopher Nolan", "Com Pedro Pascal", "Você curte
+   comédia"), senão "Em alta" ou "Bem avaliado".
+5. **Grupo (Match)**: para cada título, o percentil do score de cada participante (assim ninguém
+   pesa mais por dar nota alta para tudo); `média − 0,5·desvio`, mais um bônus por quem quer ver e
+   menos por quem já viu. Se o percentil de alguém fica abaixo de 0,25, o título vai para o fim; se
+   todo mundo já viu, sai do deck.
+
+Onde entra:
+
+- **Início**: o destaque é o de maior score entre os 10 do trending; a fileira "Pra você" vem logo
+  depois do Top 10 (sem o que você já curtiu, salvou, passou ou viu, e com no máximo 3 do mesmo
+  gênero entre os 10 primeiros); "Porque você curtiu X" usa uma das suas 3 curtidas mais recentes
+  (muda a cada dia; sem curtidas, não aparece); uma das fileiras de gênero é o seu gênero mais
+  forte, e as fileiras de gênero e de séries vêm ordenadas pelo score. Top 10, "Seus amigos
+  curtiram" e "Filmes aclamados" não mudam.
+- **Swipe**: não mostra o que você já avaliou ("talvez" volta depois de 7 dias). A ordem é o score
+  com uma variação por visita (a seed), e a cada 5 cartas uma é de exploração: bem avaliada, de um
+  gênero que você quase não curte.
+- **Reels**: tira o que você já viu ou passou, deixa os curtidos no fim e ordena por
+  `0,6·score + 0,4·popularidade`.
+- Swipe e Reels guardam a ordem calculada na primeira página por 30 minutos. A paginação segue
+  essa ordem e não pula nem repete nada enquanto o score muda com os seus swipes.
+- Sem login, a API devolve tudo como antes (Swipe aleatório fixo pela seed, Reels por
+  popularidade), sem motivo.
 
 ## Acessibilidade
 
 - Elementos reais de botão e link, com nome acessível em todo botão só de ícone.
+- O motivo da recomendação faz parte do nome acessível do card (Início) ou o descreve
+  (`aria-describedby` no Swipe e no Reels), sempre como texto.
 - Foco sempre visível e link "Pular para o conteúdo".
 - Contraste de texto ≥ 4,5:1. Sobre imagens, uma camada chapada escura (60%) garante isso para
   qualquer imagem, sem degradê.
@@ -252,7 +309,8 @@ ficou. O front consulta a sala a cada 2,5 s e a lista de salas a cada 4 s.
 - Uma tabela `title` para filme e série; dados só de exibição (produtoras, países, onde assistir)
   numa coluna JSONB.
 - Busca fuzzy no próprio Postgres (`pg_trgm` + `unaccent`), sem serviço extra.
-- Swipe em ordem aleatória mas estável (hash do id com uma seed); Reels e Swipe paginam por cursor.
+- Recomendação por conteúdo, calculada em memória no back (sem ML, embeddings nem serviço extra);
+  Reels, Swipe e o deck do Match paginam por cursor sobre uma ordem guardada.
 - Match sem WebSocket: consulta periódica basta para salas pequenas. Toda escrita trava a linha da
   sala (`SELECT … FOR UPDATE`), então dois votos simultâneos não deixam o match passar batido.
 - Front sem biblioteca de UI: componentes próprios sobre design tokens em CSS.

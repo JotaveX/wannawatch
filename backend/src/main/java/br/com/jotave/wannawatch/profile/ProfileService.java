@@ -5,12 +5,14 @@ import br.com.jotave.wannawatch.auth.UserRef;
 import br.com.jotave.wannawatch.catalog.api.CatalogDtos.GenreRef;
 import br.com.jotave.wannawatch.catalog.api.CatalogDtos.TitleCard;
 import br.com.jotave.wannawatch.catalog.application.TitleCards;
+import br.com.jotave.wannawatch.feedback.SignalChangedEvent;
 import br.com.jotave.wannawatch.shared.web.BadRequestException;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.util.Arrays;
 import java.util.List;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -32,11 +34,13 @@ public class ProfileService {
     private final JdbcClient jdbc;
     private final TitleCards cards;
     private final Clock clock;
+    private final ApplicationEventPublisher events;
 
-    public ProfileService(JdbcClient jdbc, TitleCards cards, Clock clock) {
+    public ProfileService(JdbcClient jdbc, TitleCards cards, Clock clock, ApplicationEventPublisher events) {
         this.jdbc = jdbc;
         this.cards = cards;
         this.clock = clock;
+        this.events = events;
     }
 
     /**
@@ -101,6 +105,8 @@ public class ProfileService {
                 .param("genre", changes.favoriteGenreId()).param("title", changes.favoriteTitleId())
                 .param("id", me.id())
                 .update();
+        // gênero e título favoritos entram no perfil de gosto
+        events.publishEvent(new SignalChangedEvent(me.id()));
         return get(me);
     }
 

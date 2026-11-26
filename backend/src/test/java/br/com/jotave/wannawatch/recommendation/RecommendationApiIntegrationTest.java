@@ -243,6 +243,23 @@ class RecommendationApiIntegrationTest {
     class Perfil {
 
         @Test
+        void trocarOsFavoritosAtualizaAsRecomendacoesNaHora() throws Exception {
+            long jotaveId = jdbc.sql("SELECT id FROM app_user WHERE username = 'jotave'").query(Long.class).single();
+            assertThat(recommendations.profile(jotaveId).favoriteGenreId()).isNull(); // fica em cache
+            long horror = jdbc.sql("SELECT id FROM genre WHERE slug = 'terror'").query(Long.class).single();
+
+            mvc.perform(put("/api/me/profile").header("Authorization", "Bearer " + jotave)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"displayName\":\"Jotave\",\"color\":0,\"favoriteGenreId\":" + horror
+                                    + ",\"favoriteTitleId\":" + s1 + "}"))
+                    .andExpect(status().isOk());
+
+            var profile = recommendations.profile(jotaveId);
+            assertThat(profile.favoriteGenreId()).isEqualTo(horror);
+            assertThat(profile.positiveSignals()).isEqualTo(1);
+        }
+
+        @Test
         void votoDoMatchContaMesmoDepoisDeSairDaSala() throws Exception {
             String code = JsonPath.read(mvc.perform(post("/api/match/rooms").header("Authorization", "Bearer " + bia)
                             .contentType(MediaType.APPLICATION_JSON).content("{}"))
