@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, DestroyRef, inject, input } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { AuthStore } from '../core/auth/auth-store';
+import { Avatar } from '../shared/ui/avatar';
 import { Icon } from '../shared/ui/icon';
 import { Logo } from '../shared/ui/logo';
 import { ActiveSlider } from './active-slider';
@@ -12,7 +13,7 @@ import { ActiveSlider } from './active-slider';
  */
 @Component({
   selector: 'ww-top-nav',
-  imports: [RouterLink, RouterLinkActive, Icon, Logo],
+  imports: [RouterLink, RouterLinkActive, Avatar, Icon, Logo],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { '[class.solid]': '!overImage()', '(window:resize)': 'slider.measure()' },
   template: `
@@ -47,7 +48,11 @@ import { ActiveSlider } from './active-slider';
         </div>
       </nav>
 
-      <a routerLink="/perfil" class="avatar" [attr.aria-label]="'Perfil de ' + (auth.user()?.displayName ?? '')">{{ auth.initials() }}</a>
+      @if (auth.user(); as user) {
+        <a routerLink="/perfil" class="avatar" [attr.aria-label]="'Perfil de ' + user.displayName">
+          <ww-avatar [user]="user" [size]="44" />
+        </a>
+      }
     </header>
   `,
   styles: `
@@ -151,12 +156,7 @@ import { ActiveSlider } from './active-slider';
       place-items: center;
       width: var(--ww-touch);
       height: var(--ww-touch);
-      border-radius: var(--ww-radius-sm);
-      background: var(--ww-yellow);
-      color: var(--ww-bg-dark);
-      font-family: var(--ww-font-display);
-      font-weight: 700;
-      font-size: 14px;
+      border-radius: 50%;
       text-decoration: none;
       transition: transform var(--ww-medium) var(--ww-ease-spring);
     }
