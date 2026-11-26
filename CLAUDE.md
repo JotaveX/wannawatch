@@ -1,0 +1,86 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+wannawatch? is a movie/series recommendation app (Home vitrine, Swipe, Reels, group Match). Monorepo:
+`frontend/` (Angular 21) and `backend/` (Java 21 + Spring Boot 4), with Postgres 18 via `docker-compose.yml`.
+`README.md` is the source of truth for the API table, routes, keyboard shortcuts and product rules — keep it
+updated when those change.
+
+**Language:** code identifiers are English, but comments, UI text, error messages, migration names, README and
+commit messages are Brazilian Portuguese. Follow that.
+
+## Commands
+
+Setup: `cp .env.example .env` (needs `TMDB_API_TOKEN`; `ADMIN_TOKEN` optional). The backend reads `../.env`
+directly via `spring.config.import`, so it works from `backend/` without exporting variables.
+
+```bash
+docker compose up -d --wait        # Postgres on :5434   (docker compose down -v to reset)
+
+# backend (port 8081) — uses the Maven wrapper
+cd backend
+./mvnw spring-boot:run
+./mvnw test                        # needs Docker: Testcontainers starts postgres:18-alpine
+./mvnw test -Dtest=TmdbMapperTest  # single class (or -Dtest='Class#method')
+
+# frontend (port 4200) — uses the local CLI, no global ng
+cd frontend
+npm start
+npm test -- --watch=false                                   # Vitest via @angular/build:unit-test
+npx ng test --watch=false --include src/app/core/format.spec.ts   # single spec
+npm run build
+npx prettier --write <files>                                # printWidth 100, single quotes
+```
+
+Swagger: `http://localhost:8081/swagger-ui.html`. Component showcase (dev only): `/dev/componentes`.
+
+## Backend architecture (`br.com.jotave.wannawatch`)
+
+- **Packages by feature**: `catalog` (`api` / `application` / `domain`), `tmdb` (`client` + `importer`), `auth`,
+  `social` (likes), `match`, `profile`, `shared` (web errors, cursors, CORS, clock).
+- **Data access**: schema is owned by Flyway (`src/main/resources/db/migration`, `V<n>__descricao.sql`), with
+  `ddl-auto: validate`. JPA entities exist in `catalog/domain`, but most reads and all social/match/auth logic use
+  `JdbcClient` with hand-written SQL (services under `catalog/application`, `LikeService`, `MatchService`, etc.).
+  Never edit an applied migration — add a new one.
+- **Catalog source**: the frontend never talks to TMDB. `tmdb/importer` (`CatalogImporter` → `TmdbMapper` →
+  `CatalogWriter`) pulls lists configured in `wannawatch.import.lists` into Postgres; it runs on startup if the DB
+  is empty, on a daily cron, and via `POST /api/admin/import` (`X-Admin-Token`). Import is idempotent.
+  `TmdbClient` throttles (`RequestThrottle`) and retries 429/5xx. Display-only data lives in a JSONB column on
+  `title`; one `title` table covers both movies and series (`MediaType`).
+- **Auth**: no Spring Security. Opaque bearer token (SHA-256 stored) resolved by `AuthUserResolver`, a
+  `HandlerMethodArgumentResolver` — an endpoint is protected simply by declaring an `AuthUser` parameter (throws
+  401 otherwise). Passwords are checked with `pgcrypto` in SQL. Seed users (`jotave`, `bia`, `caio`, password
+  `wannawatch`) come from migration V4; everyone is friends with everyone.
+- **Errors**: throw `NotFoundException` / `BadRequestException` / `ConflictException` / `ForbiddenException` /
+  `UnauthorizedException`; `ApiExceptionHandler` turns them into ProblemDetail.
+- **Pagination**: page-based lists use `PageResponse`; feeds (Swipe, Reels, Match deck) use `Cursor` +
+  `CursorResponse` (`{ items, nextCursor }`). Swipe order is a stable hash of id + `seed`.
+- **Search**: fuzzy in Postgres (`pg_trgm` + `unaccent`), threshold `wannawatch.search.similarity-threshold`.
+- **Match**: polling, no WebSocket. Every write locks the room row (`SELECT … FOR UPDATE`) so concurrent votes
+  can't miss a match. Room mascot count `MatchService.MASCOTS` must match `frontend/.../room-mascots.ts` and the
+  files in `frontend/public/mascot/rooms`.
+- **Tests**: integration tests use `TestcontainersConfiguration` and `src/test/resources/config/application.yml`
+  (fake TMDB token, import disabled). TMDB responses are fixtures in `src/test/resources/tmdb` (`TmdbFixtures`).
+
+## Frontend architecture (`frontend/src/app`)
+
+- Standalone components, signals, zoneless, `OnPush`; no UI library — own components in `shared/ui` on top of
+  CSS design tokens in `src/styles/tokens.css`. Mind the `anyComponentStyle` budget (6kB warn / 8kB error).
+- `core/api`: `models.ts` mirrors backend DTOs; `CatalogApi` / `social-api.ts` are the only places that call HTTP.
+  API base URL is in `src/environments/`.
+- `core/auth`: `AuthStore` (token in localStorage), interceptor adds the bearer token and handles 401, guards
+  `requireLogin` / `guestOnly`. Every route except `/entrar` requires login.
+- `core/social/LikesStore`: per-title likes (mine + friends'), batch-fetched, optimistic updates.
+- **Layout is driven by route `data`** (`layout/route-meta.ts`): `shell` = `feed` (TikTok-style side nav on
+  desktop ≥1024px), `cinema` (page renders its own top pill menu), or `bare` (no nav); `theme` = `light` / `dark`,
+  applied by `App` to `<html data-theme>`. Mobile always gets the bottom tab bar (except `bare`). New routes go in
+  `app.routes.ts` with lazy `loadComponent` and this metadata.
+- `features/<tela>`: one folder per screen. Test data builders live in `src/testing`.
+
+## Conventions worth keeping
+
+- Accessibility is a requirement (verified with axe, WCAG 2.1 AA): real buttons/links, accessible names on
+  icon-only buttons, visible focus, ≥4.5:1 contrast (flat 60% dark overlay over images, no gradients), ≥44px touch
+  targets, keyboard alternatives to dragging, respect `prefers-reduced-motion`.
+- TMDB/JustWatch attribution must stay on `/sobre` (and JustWatch in the details "Onde assistir" block).
