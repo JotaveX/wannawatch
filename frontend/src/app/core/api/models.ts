@@ -285,3 +285,44 @@ export interface Room {
   matchedAt: string | null;
   createdAt: string;
 }
+
+// --- vídeos do Reels (teste com a API do YouTube; só admin) ---
+
+export type VideoStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
+
+export interface TitleVideo {
+  id: number;
+  /** id do vídeo no YouTube */
+  externalKey: string;
+  videoTitle: string | null;
+  channelTitle: string | null;
+  publishedAt: string | null;
+  durationSeconds: number | null;
+  width: number | null;
+  height: number | null;
+  vertical: boolean;
+  embeddable: boolean;
+  /** bloqueado no Brasil */
+  blockedInRegion: boolean;
+  searchRank: number | null;
+  status: VideoStatus;
+}
+
+export interface TitleVideoSearch {
+  titleId: number;
+  title: string;
+  mediaType: MediaType;
+  year: number | null;
+  poster: ImageSet | null;
+  query: string;
+  resultsCount: number;
+  searchedAt: string;
+  videos: TitleVideo[];
+}
+
+export interface DiscoverResult {
+  titlesSearched: number;
+  videosFound: number;
+  /** preenchido quando a rodada parou no meio (ex.: cota do YouTube acabou) */
+  error: string | null;
+}

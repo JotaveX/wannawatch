@@ -115,6 +115,12 @@ const members: Routes = [
           loadComponent: () => import('./features/dev/ui-catalog').then((m) => m.UiCatalog),
           data: feed(),
         },
+        {
+          path: 'dev/videos',
+          title: 'Vídeos do Reels · wannawatch?',
+          loadComponent: () => import('./features/dev/video-review').then((m) => m.VideoReview),
+          data: feed(),
+        },
       ]
     : []),
 ];

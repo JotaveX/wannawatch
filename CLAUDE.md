@@ -12,7 +12,7 @@ commit messages are Brazilian Portuguese. Follow that.
 
 ## Commands
 
-Setup: `cp .env.example .env` (needs `TMDB_API_TOKEN`; `ADMIN_TOKEN` optional; `MAIL_*` default to Mailpit). The backend reads `../.env`
+Setup: `cp .env.example .env` (needs `TMDB_API_TOKEN`; `ADMIN_TOKEN` / `YOUTUBE_API_KEY` optional; `MAIL_*` default to Mailpit). The backend reads `../.env`
 directly via `spring.config.import`, so it works from `backend/` without exporting variables.
 
 ```bash
@@ -65,6 +65,11 @@ Swagger: `http://localhost:8081/swagger-ui.html`. Component showcase (dev only):
 - **Match**: polling, no WebSocket. Every write locks the room row (`SELECT … FOR UPDATE`) so concurrent votes
   can't miss a match. Room mascot count `MatchService.MASCOTS` must match `frontend/.../room-mascots.ts` and the
   files in `frontend/public/mascot/rooms`.
+- **Reels videos (experiment)**: `video` package. `YoutubeClient` (YouTube Data API v3, `YOUTUBE_API_KEY`) finds
+  short trailers; only metadata is stored in `title_video` (status `PENDING`/`APPROVED`/`REJECTED`) and
+  `title_video_search` (one row per searched title, so quota isn't wasted). Videos are never downloaded — they play
+  through the YouTube embed (API terms). Admin endpoints use `shared/web/AdminGuard` (`X-Admin-Token`, 403 on a
+  wrong token so the frontend interceptor doesn't log out). Review page: `/dev/videos` (dev only).
 - **Tests**: integration tests use `TestcontainersConfiguration` and `src/test/resources/config/application.yml`
   (fake TMDB token, import disabled). TMDB responses are fixtures in `src/test/resources/tmdb` (`TmdbFixtures`).
 
@@ -72,7 +77,7 @@ Swagger: `http://localhost:8081/swagger-ui.html`. Component showcase (dev only):
 
 - Standalone components, signals, zoneless, `OnPush`; no UI library — own components in `shared/ui` on top of
   CSS design tokens in `src/styles/tokens.css`. Mind the `anyComponentStyle` budget (6kB warn / 8kB error).
-- `core/api`: `models.ts` mirrors backend DTOs; `CatalogApi` / `social-api.ts` are the only places that call HTTP.
+- `core/api`: `models.ts` mirrors backend DTOs; `CatalogApi` / `social-api.ts` (and the dev-only `VideoAdminApi`) are the only places that call HTTP.
   API base URL is in `src/environments/`.
 - `core/auth`: `AuthStore` (token + `account` status in localStorage, `signupStep` / `ready`), interceptor adds
   the bearer token and handles 401, guards `requireLogin` / `requireSignupDone` / `guestOnly` / `signupPending`.

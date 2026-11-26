@@ -31,8 +31,9 @@ public class WebConfig implements WebMvcConfigurer {
     public void addCorsMappings(CorsRegistry registry) {
         registry.addMapping("/api/**")
                 .allowedOrigins(allowedOrigins)
-                .allowedMethods("GET", "HEAD", "POST", "PUT", "DELETE", "OPTIONS")
-                .allowedHeaders("Authorization", "Content-Type");
+                .allowedMethods("GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
+                // X-Admin-Token: página /dev/videos chama os endpoints de admin pelo navegador
+                .allowedHeaders("Authorization", "Content-Type", "X-Admin-Token");
     }
 
     @Override

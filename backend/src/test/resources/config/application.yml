@@ -4,6 +4,8 @@ wannawatch:
     api-token: test-token
     requests-per-second: 1000
     max-retries: 2
+  youtube:
+    api-key: test-youtube-key
   import:
     on-startup-if-empty: false
     cron: "-"

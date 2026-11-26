@@ -39,6 +39,9 @@ O `.env` fica fora do git. Ele é lido pelo docker-compose e pelo back-end. Pree
   <https://www.themoviedb.org/settings/api> (uso não comercial é gratuito).
 - `ADMIN_TOKEN`: qualquer valor secreto; protege o endpoint que dispara a importação.
   Gere um com `openssl rand -hex 16`. Vazio = endpoint desligado.
+- `YOUTUBE_API_KEY`: chave da YouTube Data API v3
+  (<https://console.cloud.google.com/apis/credentials>), usada no teste dos vídeos do Reels.
+  Vazia = busca desligada.
 - `RESEND_API_KEY`: chave do [Resend](https://resend.com/api-keys). Preenchida, o código de
   confirmação do cadastro sai pela API do Resend, e `MAIL_FROM` precisa ser de um domínio
   verificado lá (com `onboarding@resend.dev` só chega no e-mail do dono da conta).
@@ -107,6 +110,8 @@ Documentação interativa (Swagger): <http://localhost:8081/swagger-ui.html>
 | `GET …/deck?cursor=&size=` | Deck da sala na ordem do grupo, sem o que eu já votei, com o motivo de cada carta |
 | `PUT …/votes/{titleId}` (`{ liked }`) · `DELETE …/votes/{titleId}` | Votar · desfazer voto |
 | `DELETE …/participants/me` | Sair da sala |
+| `POST /api/admin/videos/discover` (`{ limit?, titleIds? }`) | Admin: busca vídeos curtos no YouTube para os títulos mais populares ainda não buscados (1 a 20, padrão 10) |
+| `GET /api/admin/videos` · `PATCH /api/admin/videos/{id}` (`{ status }`) | Admin: títulos buscados com os vídeos achados · aprovar/reprovar (`PENDING`, `APPROVED`, `REJECTED`) |
 
 - `type` é `MOVIE` ou `SERIES`; `genre` é o slug (ex.: `ficcao-cientifica`).
 - `source` (opcional) diz de que tela veio a interação: `SWIPE`, `REELS`, `DETAILS`, `HOME` ou `MATCH`
@@ -118,6 +123,7 @@ Documentação interativa (Swagger): <http://localhost:8081/swagger-ui.html>
 - Catálogo é aberto; curtidas, sinais, Match e `/auth/me` exigem `Authorization: Bearer <token>` (401 sem ele).
   Home, Swipe e Reels aceitam o token opcionalmente: sem ele respondem como antes; com um token
   inválido dão 401.
+- Os endpoints `/api/admin/videos` pedem o header `X-Admin-Token` (403 se errado, 404 sem `ADMIN_TOKEN`).
 - CORS: origens liberadas em `CORS_ALLOWED_ORIGINS` (padrão `http://localhost:4200`).
 
 ## 4. Front-end
@@ -131,6 +137,7 @@ npm test -- --watch=false
 
 - A URL da API fica em `src/environments/` (dev: `http://localhost:8081/api`).
 - Vitrine dos componentes (só em dev): <http://localhost:4200/dev/componentes>.
+- Revisão dos vídeos do Reels (só em dev): <http://localhost:4200/dev/videos>.
 
 Organização (`src/app`):
 
@@ -185,6 +192,19 @@ Regras:
   interações (`interaction_event`) sobrevive, mas as curtidas e os sinais não voltam sozinhos.
 - Limite de 20 requisições/s à TMDB, com novas tentativas em 429/5xx.
 
+## Vídeos do Reels (teste)
+
+Em teste: achar vídeos curtos de cada título para o Reels virar vídeo de verdade.
+
+- A busca usa a YouTube Data API v3 (`search.list` com `videoDuration=short`, `videoEmbeddable=true`,
+  região BR), com a consulta `"<título> [série] <ano> trailer"`, e lê os detalhes com `videos.list`.
+- Só os **metadados** vão para o banco (`title_video`): id do vídeo, canal, duração, proporção do
+  player, se é embutível e se está bloqueado no Brasil. O vídeo nunca é baixado: os termos da API
+  proíbem guardar o conteúdo, então ele toca pelo player oficial (embed).
+- Cada título buscado fica em `title_video_search`, mesmo sem resultado, e não é buscado de novo
+  (a não ser pedindo por `titleIds`). A cota padrão é de 100 buscas por dia.
+- Tudo entra como `PENDING`; a revisão é em `/dev/videos`. O Reels ainda não usa esses vídeos.
+
 ### Atribuição
 
 A TMDB exige o logo dela e o aviso *"This product uses the TMDB API but is not endorsed or
@@ -209,6 +229,7 @@ lateral. Os dados de "onde assistir" vêm da JustWatch, creditada em `/sobre` e 
 | `/sobre` | Sobre e créditos | claro |
 | `/series`, `/filmes` | Por enquanto abrem a busca | escuro |
 | `/dev/componentes` | Vitrine de componentes (só em dev) | claro e escuro |
+| `/dev/videos` | Teste dos vídeos do Reels: busca no YouTube e aprova/reprova (só em dev, pede o `ADMIN_TOKEN`) | claro |
 
 No celular a navegação fica numa barra de abas embaixo. No desktop (a partir de 1024px), Swipe,
 Reels e as telas secundárias ganham uma barra lateral no estilo TikTok web; Início, Detalhes e

@@ -73,6 +73,13 @@ wannawatch:
     requests-per-second: 20
     max-concurrency: 6
     max-retries: 3
+  # Vídeos curtos do Reels (fase de teste): só busca e metadados, o vídeo toca pelo embed.
+  youtube:
+    base-url: https://www.googleapis.com/youtube/v3
+    api-key: ${YOUTUBE_API_KEY:}
+    region-code: BR
+    relevance-language: pt
+    results-per-search: 5
   import:
     on-startup-if-empty: true
     cron: "0 0 4 * * *"   # todo dia às 4h; "-" desliga
