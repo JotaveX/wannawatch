@@ -1,5 +1,5 @@
 import { effect, inject, Injectable, signal, untracked } from '@angular/core';
-import { TitleLikes, UserRef } from '../api/models';
+import { InteractionSource, TitleLikes, UserRef } from '../api/models';
 import { SocialApi } from '../api/social-api';
 import { AuthStore } from '../auth/auth-store';
 
@@ -75,18 +75,18 @@ export class LikesStore {
     queueMicrotask(() => this.flush());
   }
 
-  setLiked(titleId: number, liked: boolean): void {
+  setLiked(titleId: number, liked: boolean, source?: InteractionSource): void {
     const before = this.get(titleId);
     if ((before?.likedByMe ?? false) === liked) return;
     this.put({ titleId, likedByMe: liked, friends: before?.friends ?? [] });
-    const call = liked ? this.api.like(titleId) : this.api.unlike(titleId);
+    const call = liked ? this.api.like(titleId, source) : this.api.unlike(titleId, source);
     call.subscribe({
       error: () => this.put(before ?? { titleId, likedByMe: !liked, friends: [] }),
     });
   }
 
-  toggle(titleId: number): void {
-    this.setLiked(titleId, !this.likedByMe(titleId));
+  toggle(titleId: number, source?: InteractionSource): void {
+    this.setLiked(titleId, !this.likedByMe(titleId), source);
   }
 
   private flush(): void {

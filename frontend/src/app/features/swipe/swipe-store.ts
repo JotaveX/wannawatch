@@ -1,10 +1,14 @@
 import { computed, DestroyRef, inject, Injectable, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CatalogApi } from '../../core/api/catalog-api';
-import { TitleCard } from '../../core/api/models';
+import { SignalKind, TitleCard } from '../../core/api/models';
 import { LikesStore } from '../../core/social/likes-store';
+import { SignalsStore } from '../../core/social/signals-store';
 
 export type Decision = 'pass' | 'maybe' | 'like' | 'seen';
+
+/** "Quero ver" vai para as curtidas; o resto vira um sinal no back. */
+const SIGNAL: Record<Exclude<Decision, 'like'>, SignalKind> = { pass: 'PASS', maybe: 'MAYBE', seen: 'SEEN' };
 
 export interface Choice {
   card: TitleCard;
@@ -22,12 +26,14 @@ export function newSeed(): string {
 
 /**
  * Estado do Swipe: deck carregado aos poucos por cursor, posição atual e histórico de escolhas.
- * "Quero ver" vai para o back (aparece para os amigos); talvez/passa/já vi ficam só nesta tela.
+ * Toda escolha vai para o back: "quero ver" nas curtidas (aparece para os amigos) e
+ * talvez/passa/já vi como sinais. "Voltar" desfaz a escolha no back também.
  */
 @Injectable()
 export class SwipeStore {
   private readonly api = inject(CatalogApi);
   private readonly likes = inject(LikesStore);
+  private readonly signals = inject(SignalsStore);
   private readonly destroyRef = inject(DestroyRef);
 
   private seed = newSeed();
@@ -60,7 +66,7 @@ export class SwipeStore {
     if (!card) return;
     this.history.update((h) => [...h, { card, decision }]);
     this.index.update((i) => i + 1);
-    if (decision === 'like') this.likes.setLiked(card.id, true);
+    this.persist(card.id, decision, true);
     this.prefetch();
   }
 
@@ -69,7 +75,12 @@ export class SwipeStore {
     if (!last) return;
     this.history.update((h) => h.slice(0, -1));
     this.index.update((i) => Math.max(0, i - 1));
-    if (last.decision === 'like') this.likes.setLiked(last.card.id, false);
+    this.persist(last.card.id, last.decision, false);
+  }
+
+  private persist(titleId: number, decision: Decision, on: boolean): void {
+    if (decision === 'like') this.likes.setLiked(titleId, on, 'SWIPE');
+    else this.signals.set(titleId, SIGNAL[decision], on, 'SWIPE');
   }
 
   /** Recomeça com outra ordem (quando o deck acaba). */

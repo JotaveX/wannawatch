@@ -201,6 +201,17 @@ export interface LoginResponse {
 }
 
 /** Para um título: se eu curti e quais amigos (todos os outros usuários) curtiram. */
+/** Sinais guardados no back além do "quero ver" (que fica nas curtidas). */
+export type SignalKind = 'PASS' | 'MAYBE' | 'SEEN' | 'SAVED';
+
+/** De que tela veio a interação (vai para o log de interações do back). */
+export type InteractionSource = 'SWIPE' | 'REELS' | 'DETAILS' | 'HOME' | 'MATCH';
+
+export interface TitleSignals {
+  titleId: number;
+  kinds: SignalKind[];
+}
+
 export interface TitleLikes {
   titleId: number;
   likedByMe: boolean;

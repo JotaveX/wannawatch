@@ -4,6 +4,7 @@ import { RouterLink } from '@angular/router';
 import { length, typeLabel } from '../../core/format';
 import { titleLink } from '../../core/title-link';
 import { LikesStore } from '../../core/social/likes-store';
+import { SignalsStore } from '../../core/social/signals-store';
 import { Button } from '../../shared/ui/button';
 import { Icon } from '../../shared/ui/icon';
 import { IconButton } from '../../shared/ui/icon-button';
@@ -38,11 +39,10 @@ const KEYS: Record<string, 'prev' | 'next' | 'like' | 'save'> = {
 export class ReelsPage {
   protected readonly store = inject(ReelsStore);
   protected readonly likes = inject(LikesStore);
+  protected readonly signals = inject(SignalsStore);
   private readonly document = inject(DOCUMENT);
   private readonly reels = viewChildren(ReelItem, { read: ElementRef });
 
-  /** "quero ver" vai para o back (LikesStore); "salvar" só vale nesta tela por enquanto */
-  protected readonly saved = signal<ReadonlySet<number>>(new Set());
   protected readonly active = signal(0);
   protected readonly toast = signal<string | null>(null);
 
@@ -55,8 +55,12 @@ export class ReelsPage {
 
   constructor() {
     this.store.load();
-    // quem curtiu cada reel que chegou
-    effect(() => this.likes.ensure(this.store.items().map((c) => c.id)));
+    // quem curtiu e o que eu salvei, para cada reel que chegou
+    effect(() => {
+      const ids = this.store.items().map((c) => c.id);
+      this.likes.ensure(ids);
+      this.signals.ensure(ids);
+    });
   }
 
   protected onVisible(index: number): void {
@@ -64,12 +68,12 @@ export class ReelsPage {
     this.store.reached(index);
   }
 
-  protected toggle(set: typeof this.saved, id: number): void {
-    set.update((s) => {
-      const next = new Set(s);
-      if (!next.delete(id)) next.add(id);
-      return next;
-    });
+  protected toggleLike(id: number): void {
+    this.likes.toggle(id, 'REELS');
+  }
+
+  protected toggleSaved(id: number): void {
+    this.signals.toggle(id, 'SAVED', 'REELS');
   }
 
   protected go(delta: number): void {
@@ -109,8 +113,8 @@ export class ReelsPage {
     event.preventDefault();
     if (action === 'prev') this.go(-1);
     else if (action === 'next') this.go(1);
-    else if (action === 'like') this.likes.toggle(card.id);
-    else this.toggle(this.saved, card.id);
+    else if (action === 'like') this.toggleLike(card.id);
+    else this.toggleSaved(card.id);
   }
 
   private flash(text: string): void {

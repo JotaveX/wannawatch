@@ -22,9 +22,9 @@
               [index]="i"
               [eager]="i < 2"
               [liked]="likes.likedByMe(card.id)"
-              [saved]="saved().has(card.id)"
-              (like)="likes.toggle(card.id)"
-              (save)="toggle(saved, card.id)"
+              [saved]="signals.has(card.id, 'SAVED')"
+              (like)="toggleLike(card.id)"
+              (save)="toggleSaved(card.id)"
               (share)="share(card.id)"
               (visible)="onVisible($event)"
             />

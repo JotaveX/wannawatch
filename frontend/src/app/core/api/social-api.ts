@@ -5,14 +5,17 @@ import { API_BASE_URL } from './api-config';
 import {
   CursorPage,
   FriendsLiked,
+  InteractionSource,
   LoginResponse,
   MediaType,
   Profile,
   ProfileActivity,
   ProfileUpdate,
   Room,
+  SignalKind,
   TitleCard,
   TitleLikes,
+  TitleSignals,
   UserRef,
 } from './models';
 
@@ -50,12 +53,12 @@ export class SocialApi {
 
   // --- curtidas ---
 
-  like(titleId: number): Observable<void> {
-    return this.http.put<void>(`${this.base}/likes/${titleId}`, null);
+  like(titleId: number, source?: InteractionSource): Observable<void> {
+    return this.http.put<void>(`${this.base}/likes/${titleId}`, null, { params: sourceParam(source) });
   }
 
-  unlike(titleId: number): Observable<void> {
-    return this.http.delete<void>(`${this.base}/likes/${titleId}`);
+  unlike(titleId: number, source?: InteractionSource): Observable<void> {
+    return this.http.delete<void>(`${this.base}/likes/${titleId}`, { params: sourceParam(source) });
   }
 
   likes(titleIds: number[]): Observable<TitleLikes[]> {
@@ -66,6 +69,26 @@ export class SocialApi {
 
   friendsLiked(size = 15): Observable<FriendsLiked[]> {
     return this.http.get<FriendsLiked[]>(`${this.base}/likes/friends`, { params: { size } });
+  }
+
+  // --- passa / talvez / já vi / salvar ---
+
+  putSignal(titleId: number, kind: SignalKind, source?: InteractionSource): Observable<void> {
+    return this.http.put<void>(`${this.base}/titles/${titleId}/signals/${kind}`, null, {
+      params: sourceParam(source),
+    });
+  }
+
+  deleteSignal(titleId: number, kind: SignalKind, source?: InteractionSource): Observable<void> {
+    return this.http.delete<void>(`${this.base}/titles/${titleId}/signals/${kind}`, {
+      params: sourceParam(source),
+    });
+  }
+
+  signals(titleIds: number[]): Observable<TitleSignals[]> {
+    return this.http.get<TitleSignals[]>(`${this.base}/me/signals`, {
+      params: new HttpParams().set('ids', titleIds.join(',')),
+    });
   }
 
   // --- Match ---
@@ -114,4 +137,8 @@ export class SocialApi {
   unvote(code: string, titleId: number): Observable<Room> {
     return this.http.delete<Room>(`${this.base}/match/rooms/${encodeURIComponent(code)}/votes/${titleId}`);
   }
+}
+
+function sourceParam(source: InteractionSource | undefined): HttpParams {
+  return source ? new HttpParams().set('source', source) : new HttpParams();
 }

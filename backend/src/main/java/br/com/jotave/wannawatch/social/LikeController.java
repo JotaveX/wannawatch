@@ -1,6 +1,7 @@
 package br.com.jotave.wannawatch.social;
 
 import br.com.jotave.wannawatch.auth.AuthUser;
+import br.com.jotave.wannawatch.feedback.InteractionSource;
 import br.com.jotave.wannawatch.social.LikeService.FriendsLiked;
 import br.com.jotave.wannawatch.social.LikeService.TitleLikes;
 import io.swagger.v3.oas.annotations.Operation;
@@ -35,15 +36,17 @@ public class LikeController {
     @PutMapping("/{titleId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @Operation(summary = "Marca \"quero ver\" (idempotente)")
-    public void like(@Parameter(hidden = true) AuthUser user, @PathVariable long titleId) {
-        likes.like(user, titleId);
+    public void like(@Parameter(hidden = true) AuthUser user, @PathVariable long titleId,
+                     @Parameter(description = "SWIPE, REELS, DETAILS, HOME ou MATCH") @RequestParam(required = false) String source) {
+        likes.like(user, titleId, InteractionSource.parse(source));
     }
 
     @DeleteMapping("/{titleId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @Operation(summary = "Desfaz o \"quero ver\" (idempotente)")
-    public void unlike(@Parameter(hidden = true) AuthUser user, @PathVariable long titleId) {
-        likes.unlike(user, titleId);
+    public void unlike(@Parameter(hidden = true) AuthUser user, @PathVariable long titleId,
+                       @RequestParam(required = false) String source) {
+        likes.unlike(user, titleId, InteractionSource.parse(source));
     }
 
     @GetMapping

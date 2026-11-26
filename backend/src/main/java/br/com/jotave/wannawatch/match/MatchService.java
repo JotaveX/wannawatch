@@ -7,6 +7,9 @@ import br.com.jotave.wannawatch.catalog.api.CatalogDtos.TitleCard;
 import br.com.jotave.wannawatch.catalog.application.SqlFilters;
 import br.com.jotave.wannawatch.catalog.application.TitleCards;
 import br.com.jotave.wannawatch.catalog.domain.MediaType;
+import br.com.jotave.wannawatch.feedback.InteractionKind;
+import br.com.jotave.wannawatch.feedback.InteractionLog;
+import br.com.jotave.wannawatch.feedback.InteractionSource;
 import br.com.jotave.wannawatch.match.MatchDtos.Participant;
 import br.com.jotave.wannawatch.match.MatchDtos.RoomResponse;
 import br.com.jotave.wannawatch.match.MatchDtos.RoomStatus;
@@ -54,12 +57,14 @@ public class MatchService {
     private final JdbcClient jdbc;
     private final TitleCards cards;
     private final Clock clock;
+    private final InteractionLog log;
     private final SecureRandom random = new SecureRandom();
 
-    public MatchService(JdbcClient jdbc, TitleCards cards, Clock clock) {
+    public MatchService(JdbcClient jdbc, TitleCards cards, Clock clock, InteractionLog log) {
         this.jdbc = jdbc;
         this.cards = cards;
         this.clock = clock;
+        this.log = log;
     }
 
     private record Room(long id, String code, long ownerId, MediaType mediaType, String genreSlug, String seed,
@@ -145,6 +150,8 @@ public class MatchService {
                 ON CONFLICT (room_id, user_id, title_id) DO UPDATE SET liked = EXCLUDED.liked, created_at = now()""")
                 .param("r", room.id()).param("u", user.id()).param("t", titleId).param("l", liked)
                 .update();
+        log.record(user.id(), titleId, liked ? InteractionKind.MATCH_VOTE_YES : InteractionKind.MATCH_VOTE_NO,
+                null, InteractionSource.MATCH, room.id());
         return view(liked ? settle(room) : room);
     }
 
@@ -153,8 +160,11 @@ public class MatchService {
         Room room = lockedParticipantRoom(user, code);
         requireStarted(room);
         if (room.winnerId() == null) {
-            jdbc.sql("DELETE FROM match_vote WHERE room_id = :r AND user_id = :u AND title_id = :t")
+            int removed = jdbc.sql("DELETE FROM match_vote WHERE room_id = :r AND user_id = :u AND title_id = :t")
                     .param("r", room.id()).param("u", user.id()).param("t", titleId).update();
+            if (removed > 0) {
+                log.record(user.id(), titleId, InteractionKind.MATCH_UNVOTE, null, InteractionSource.MATCH, room.id());
+            }
         }
         return view(room);
     }

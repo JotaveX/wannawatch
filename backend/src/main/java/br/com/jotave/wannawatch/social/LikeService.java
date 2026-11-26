@@ -4,6 +4,9 @@ import br.com.jotave.wannawatch.auth.AuthUser;
 import br.com.jotave.wannawatch.auth.UserRef;
 import br.com.jotave.wannawatch.catalog.api.CatalogDtos.TitleCard;
 import br.com.jotave.wannawatch.catalog.application.TitleCards;
+import br.com.jotave.wannawatch.feedback.InteractionKind;
+import br.com.jotave.wannawatch.feedback.InteractionLog;
+import br.com.jotave.wannawatch.feedback.InteractionSource;
 import br.com.jotave.wannawatch.shared.web.NotFoundException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -27,27 +30,32 @@ public class LikeService {
 
     private final JdbcClient jdbc;
     private final TitleCards cards;
+    private final InteractionLog log;
 
-    public LikeService(JdbcClient jdbc, TitleCards cards) {
+    public LikeService(JdbcClient jdbc, TitleCards cards, InteractionLog log) {
         this.jdbc = jdbc;
         this.cards = cards;
+        this.log = log;
     }
 
     public record TitleLikes(long titleId, boolean likedByMe, List<UserRef> friends) {}
 
     public record FriendsLiked(TitleCard title, boolean likedByMe, List<UserRef> friends) {}
 
-    public void like(AuthUser user, long titleId) {
+    /** Repetir não muda nada nem duplica o log de interações. */
+    public void like(AuthUser user, long titleId, InteractionSource source) {
         boolean exists = jdbc.sql("SELECT EXISTS (SELECT 1 FROM title WHERE id = :id)")
                 .param("id", titleId).query(Boolean.class).single();
         if (!exists) throw new NotFoundException("Título " + titleId + " não encontrado.");
-        jdbc.sql("INSERT INTO title_like (user_id, title_id) VALUES (:u, :t) ON CONFLICT DO NOTHING")
+        int inserted = jdbc.sql("INSERT INTO title_like (user_id, title_id) VALUES (:u, :t) ON CONFLICT DO NOTHING")
                 .param("u", user.id()).param("t", titleId).update();
+        if (inserted > 0) log.record(user.id(), titleId, InteractionKind.LIKE, source);
     }
 
-    public void unlike(AuthUser user, long titleId) {
-        jdbc.sql("DELETE FROM title_like WHERE user_id = :u AND title_id = :t")
+    public void unlike(AuthUser user, long titleId, InteractionSource source) {
+        int removed = jdbc.sql("DELETE FROM title_like WHERE user_id = :u AND title_id = :t")
                 .param("u", user.id()).param("t", titleId).update();
+        if (removed > 0) log.record(user.id(), titleId, InteractionKind.UNLIKE, source);
     }
 
     /** Uma entrada por id pedido, na mesma ordem, mesmo sem curtidas. */

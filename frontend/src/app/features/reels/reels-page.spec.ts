@@ -78,7 +78,7 @@ describe('ReelsPage', () => {
     const { fixture, el } = await render();
     const like = el.querySelector<HTMLButtonElement>('ww-reel-item button[aria-label="Quero ver"]')!;
     like.click();
-    http.expectOne('/api/likes/1').flush(null, { status: 500, statusText: 'Erro' });
+    http.expectOne((r) => r.url === '/api/likes/1').flush(null, { status: 500, statusText: 'Erro' });
     await fixture.whenStable();
     expect(like.getAttribute('aria-pressed')).toBe('false');
   });
@@ -89,16 +89,30 @@ describe('ReelsPage', () => {
     like.click();
     await fixture.whenStable();
     expect(like.getAttribute('aria-pressed')).toBe('true');
-    const put = http.expectOne('/api/likes/1');
+    const put = http.expectOne('/api/likes/1?source=REELS');
     expect(put.request.method).toBe('PUT');
     put.flush(null);
     key('l');
     await fixture.whenStable();
     expect(like.getAttribute('aria-pressed')).toBe('false');
-    expect(http.expectOne('/api/likes/1').request.method).toBe('DELETE');
+    expect(http.expectOne('/api/likes/1?source=REELS').request.method).toBe('DELETE');
     key('s');
     await fixture.whenStable();
     expect(el.querySelector('ww-reel-item button[aria-label="Salvar na lista"]')?.getAttribute('aria-pressed')).toBe('true');
+    expect(http.expectOne('/api/titles/1/signals/SAVED?source=REELS').request.method).toBe('PUT');
+  });
+
+  it('com login, traz o que já estava salvo', async () => {
+    localStorage.setItem('ww.session', JSON.stringify({ token: 't', user: { id: 1, username: 'jotave', displayName: 'Jotave' } }));
+    const { fixture, el } = await render();
+    await new Promise<void>((r) => queueMicrotask(r));
+    http.expectOne((r) => r.url === '/api/likes').flush([]);
+    const req = http.expectOne((r) => r.url === '/api/me/signals');
+    expect(req.request.params.get('ids')).toBe('1,2,3');
+    req.flush([{ titleId: 1, kinds: ['SAVED'] }]);
+    await fixture.whenStable();
+    expect(el.querySelector('ww-reel-item button[aria-label="Salvar na lista"]')?.getAttribute('aria-pressed')).toBe('true');
+    localStorage.clear();
   });
 
   it('compartilhar copia o link quando não há compartilhamento nativo', async () => {

@@ -38,6 +38,9 @@
             <a wwButton variant="glass" size="lg" [routerLink]="[]" fragment="onde-assistir">
               <ww-icon name="tv" [size]="18" />Onde assistir
             </a>
+            <button wwButton type="button" size="lg" [variant]="seen() ? 'light' : 'glass'" [attr.aria-pressed]="seen()" (click)="toggleSeen()">
+              <ww-icon [name]="seen() ? 'check' : 'eye'" [size]="18" />Já vi
+            </button>
           </div>
         </div>
       </div>

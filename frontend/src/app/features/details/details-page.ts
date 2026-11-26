@@ -10,6 +10,7 @@ import { length, metaLine, typeLabel } from '../../core/format';
 import { titleLink } from '../../core/title-link';
 import { TopNav } from '../../layout/top-nav';
 import { LikesStore, likedByLabel } from '../../core/social/likes-store';
+import { SignalsStore } from '../../core/social/signals-store';
 import { Button } from '../../shared/ui/button';
 import { Icon } from '../../shared/ui/icon';
 import { AppMark } from '../../shared/ui/logo';
@@ -42,6 +43,7 @@ export class DetailsPage {
   private readonly router = inject(Router);
   private readonly pageTitle = inject(Title);
   private readonly likes = inject(LikesStore);
+  private readonly signals = inject(SignalsStore);
   protected readonly retry = signal(0);
 
   protected readonly state = signal<State>({ status: 'loading' });
@@ -71,6 +73,17 @@ export class DetailsPage {
     return d ? likedByLabel(this.likes.friends(d.id)) : null;
   });
 
+  /** "Já vi": o título some do Swipe, dos Reels e das recomendações */
+  protected readonly seen = computed(() => {
+    const d = this.detail();
+    return d ? this.signals.has(d.id, 'SEEN') : false;
+  });
+
+  protected toggleSeen(): void {
+    const d = this.detail();
+    if (d) this.signals.toggle(d.id, 'SEEN', 'DETAILS');
+  }
+
   constructor() {
     const request = computed(() => ({ id: Number(this.id()), retry: this.retry() }));
     toObservable(request)
@@ -93,7 +106,10 @@ export class DetailsPage {
           return;
         }
         this.state.set(state);
-        if (state.status === 'ok') this.likes.ensure([state.detail.id]);
+        if (state.status === 'ok') {
+          this.likes.ensure([state.detail.id]);
+          this.signals.ensure([state.detail.id]);
+        }
         if (state.status === 'ok') this.pageTitle.setTitle(`${state.detail.title} · wannawatch?`);
         if (state.status === 'notfound') this.pageTitle.setTitle('Não encontrado · wannawatch?');
       });

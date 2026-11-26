@@ -83,7 +83,9 @@ Documentação interativa (Swagger): <http://localhost:8081/swagger-ui.html>
 | `GET /api/reels?cursor=&size=` | Feed do Reels por popularidade |
 | `GET /api/search?q=&page=&size=` | Busca fuzzy por título, pessoa e gênero |
 | `POST /api/auth/login` · `POST /api/auth/logout` · `GET /api/auth/me` | Login (devolve o token) |
-| `PUT`/`DELETE /api/likes/{titleId}` | "Quero ver" |
+| `PUT`/`DELETE /api/likes/{titleId}?source=` | "Quero ver" |
+| `PUT`/`DELETE /api/titles/{id}/signals/{kind}?source=` | Passa, talvez, já vi ou salvar (`kind`: `PASS`, `MAYBE`, `SEEN`, `SAVED`) |
+| `GET /api/me/signals?ids=1,2,3` | Para cada título: quais sinais eu marquei |
 | `GET /api/likes?titleIds=1,2,3` | Para cada título: se eu curti e quais amigos curtiram |
 | `GET /api/likes/friends?size=` | Títulos que os amigos curtiram (fileira da Home) |
 | `POST /api/match/rooms` · `GET /api/match/rooms` | Cria sala (`{ mediaType?, genre? }`) · salas abertas |
@@ -94,9 +96,10 @@ Documentação interativa (Swagger): <http://localhost:8081/swagger-ui.html>
 | `DELETE …/participants/me` | Sair da sala |
 
 - `type` é `MOVIE` ou `SERIES`; `genre` é o slug (ex.: `ficcao-cientifica`).
+- `source` (opcional) diz de que tela veio a interação: `SWIPE`, `REELS`, `DETAILS`, `HOME` ou `MATCH`.
 - Listas com cursor devolvem `{ items, nextCursor }`; `nextCursor` nulo = acabou.
 - Erros seguem o formato ProblemDetail (`{ status, title, detail }`).
-- Catálogo é aberto; curtidas, Match e `/auth/me` exigem `Authorization: Bearer <token>` (401 sem ele).
+- Catálogo é aberto; curtidas, sinais, Match e `/auth/me` exigem `Authorization: Bearer <token>` (401 sem ele).
 - CORS: origens liberadas em `CORS_ALLOWED_ORIGINS` (padrão `http://localhost:4200`).
 
 ## 4. Front-end
@@ -117,7 +120,7 @@ Organização (`src/app`):
 |---|---|
 | `core/api` | Contratos da API (`models.ts`) e o cliente `CatalogApi`: o único lugar que fala com o back |
 | `core/auth` | Sessão (`AuthStore`, token no localStorage), interceptor que põe o token e trata 401, guards de login |
-| `core/social` | `LikesStore`: curtidas por título (minhas e dos amigos), buscadas em lote, com atualização otimista |
+| `core/social` | `LikesStore` (curtidas por título, minhas e dos amigos) e `SignalsStore` (passa/talvez/já vi/salvar), buscados em lote, com atualização otimista |
 | `shared/ui` | Componentes base: logo, botões, botão redondo, seletor segmentado, pôster com placeholder, ícones |
 | `layout` | Barra de abas (celular), barra lateral estilo TikTok (desktop) e menu do topo das telas escuras |
 | `features` | Uma pasta por tela |
@@ -208,8 +211,10 @@ Não há cadastro: a migration `V4` cria três contas, todas com a senha `wannaw
   (`pgcrypto`), conferida pelo próprio Postgres.
 - Ainda não existe lista de amigos: **todo usuário é amigo de todo mundo**. "Fulano curtiu" (Home,
   Swipe, Reels, Detalhes) mostra o "quero ver" real dos outros usuários.
-- "Quero ver" do Swipe e do Reels fica salvo. Talvez/passa/já vi do Swipe e o "salvar" do Reels
-  ainda ficam só na memória da tela.
+- Tudo fica salvo: "quero ver", talvez/passa/já vi do Swipe, o "salvar" do Reels e o "Já vi" da
+  página de detalhes. "Voltar" no Swipe desfaz no back também.
+- Cada curtida, sinal e voto do Match também entra num log que só cresce (`interaction_event`). Ele
+  guarda o id da TMDB em vez de apontar para `title`, então sobrevive a uma reimportação do catálogo.
 
 **Match**: a tela lista as salas abertas (esperando gente, de todo mundo, e as que você está votando).
 Quem cria escolhe o deck (filmes, séries ou os dois, e opcionalmente um gênero); a sala aparece com o

@@ -3,6 +3,7 @@ package br.com.jotave.wannawatch.match;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.contains;
+import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.lessThan;
@@ -54,6 +55,8 @@ class SocialApiIntegrationTest {
         // CASCADE limpa curtidas e salas (que apontam para title)
         jdbc.sql("TRUNCATE title, genre, person RESTART IDENTITY CASCADE").update();
         jdbc.sql("DELETE FROM auth_session").update();
+        // o log não tem FK para title, então o TRUNCATE não chega nele
+        jdbc.sql("DELETE FROM interaction_event").update();
         // volta os perfis ao que a migration deixou
         jdbc.sql("""
                 UPDATE app_user SET display_name = initcap(username), color = (id - 1) % 5, mascot = NULL,
@@ -176,6 +179,118 @@ class SocialApiIntegrationTest {
         @Test
         void exigeLogin() throws Exception {
             mvc.perform(put("/api/likes/" + m1)).andExpect(status().isUnauthorized());
+        }
+    }
+
+    @Nested
+    class Sinais {
+
+        @Test
+        void criaEListaOsSinaisDeCadaTitulo() throws Exception {
+            signal(bia, m1, "seen").andExpect(status().isNoContent());
+            signal(bia, m1, "SAVED").andExpect(status().isNoContent());
+            signal(bia, m2, "pass").andExpect(status().isNoContent());
+            signal(caio, m3, "maybe").andExpect(status().isNoContent()); // de outra pessoa: não aparece
+
+            mvc.perform(get("/api/me/signals").param("ids", m1 + "," + m2 + "," + m3).header("Authorization", "Bearer " + bia))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$[*].titleId", contains((int) m1, (int) m2, (int) m3)))
+                    .andExpect(jsonPath("$[0].kinds", containsInAnyOrder("SEEN", "SAVED")))
+                    .andExpect(jsonPath("$[1].kinds", contains("PASS")))
+                    .andExpect(jsonPath("$[2].kinds", hasSize(0)));
+        }
+
+        @Test
+        void criarERemoverSaoIdempotentesSemDuplicarOLog() throws Exception {
+            signal(bia, m1, "SEEN").andExpect(status().isNoContent());
+            signal(bia, m1, "SEEN").andExpect(status().isNoContent());
+            assertThat(count("SELECT count(*) FROM user_title_signal")).isEqualTo(1);
+
+            unsignal(bia, m1, "SEEN").andExpect(status().isNoContent());
+            unsignal(bia, m1, "SEEN").andExpect(status().isNoContent());
+            assertThat(count("SELECT count(*) FROM user_title_signal")).isZero();
+
+            assertThat(events()).containsExactly("SEEN:null", "SIGNAL_REMOVED:SEEN");
+        }
+
+        @Test
+        void eventoGuardaOrigemEIdDaTmdb() throws Exception {
+            mvc.perform(put("/api/titles/" + m2 + "/signals/PASS").param("source", "swipe")
+                            .header("Authorization", "Bearer " + bia))
+                    .andExpect(status().isNoContent());
+            var row = jdbc.sql("SELECT title_external_id, media_type, title_id, source FROM interaction_event")
+                    .query().singleRow();
+            assertThat(row).containsEntry("title_external_id", 2).containsEntry("media_type", "MOVIE")
+                    .containsEntry("title_id", m2).containsEntry("source", "SWIPE");
+        }
+
+        @Test
+        void talvezDeNovoRenovaAData() throws Exception {
+            signal(bia, m1, "MAYBE").andExpect(status().isNoContent());
+            jdbc.sql("UPDATE user_title_signal SET created_at = now() - interval '10 days'").update();
+            signal(bia, m1, "MAYBE").andExpect(status().isNoContent());
+            assertThat(count("SELECT count(*) FROM user_title_signal WHERE created_at > now() - interval '1 day'"))
+                    .isEqualTo(1);
+        }
+
+        @Test
+        void curtidaEVotoTambemVaoParaOLog() throws Exception {
+            mvc.perform(put("/api/likes/" + m1).param("source", "REELS").header("Authorization", "Bearer " + jotave))
+                    .andExpect(status().isNoContent());
+            like(jotave, m1); // repetido: não loga
+            mvc.perform(delete("/api/likes/" + m1).header("Authorization", "Bearer " + jotave))
+                    .andExpect(status().isNoContent());
+
+            String code = create(jotave, "{}");
+            join(bia, code);
+            start(jotave, code);
+            vote(jotave, code, m2, true);
+            vote(jotave, code, m3, false);
+            mvc.perform(delete("/api/match/rooms/" + code + "/votes/" + m3).header("Authorization", "Bearer " + jotave))
+                    .andExpect(status().isOk());
+
+            assertThat(events()).containsExactly("LIKE:null", "UNLIKE:null", "MATCH_VOTE_YES:null",
+                    "MATCH_VOTE_NO:null", "MATCH_UNVOTE:null");
+            assertThat(count("SELECT count(*) FROM interaction_event WHERE kind LIKE 'MATCH%' AND source = 'MATCH' AND room_id IS NOT NULL"))
+                    .isEqualTo(3);
+        }
+
+        @Test
+        void sinalDesconhecidoDa400() throws Exception {
+            signal(bia, m1, "LIKE").andExpect(status().isBadRequest());
+            mvc.perform(put("/api/titles/" + m1 + "/signals/SEEN").param("source", "CINEMA")
+                            .header("Authorization", "Bearer " + bia))
+                    .andExpect(status().isBadRequest());
+        }
+
+        @Test
+        void tituloInexistenteDa404() throws Exception {
+            signal(bia, 9999, "SEEN").andExpect(status().isNotFound());
+        }
+
+        @Test
+        void exigeLogin() throws Exception {
+            mvc.perform(put("/api/titles/" + m1 + "/signals/SEEN")).andExpect(status().isUnauthorized());
+            mvc.perform(delete("/api/titles/" + m1 + "/signals/SEEN")).andExpect(status().isUnauthorized());
+            mvc.perform(get("/api/me/signals").param("ids", "1")).andExpect(status().isUnauthorized());
+        }
+
+        private ResultActions signal(String token, long titleId, String kind) throws Exception {
+            return mvc.perform(put("/api/titles/" + titleId + "/signals/" + kind).header("Authorization", "Bearer " + token));
+        }
+
+        private ResultActions unsignal(String token, long titleId, String kind) throws Exception {
+            return mvc.perform(delete("/api/titles/" + titleId + "/signals/" + kind).header("Authorization", "Bearer " + token));
+        }
+
+        private int count(String sql) {
+            return jdbc.sql(sql).query(Integer.class).single();
+        }
+
+        /** "KIND:value" de cada evento, na ordem em que foram gravados. */
+        private List<String> events() {
+            return jdbc.sql("SELECT kind || ':' || coalesce(value, 'null') FROM interaction_event ORDER BY id")
+                    .query(String.class).list();
         }
     }
 

@@ -91,16 +91,27 @@ describe('SwipeStore', () => {
     store.start();
     deck().flush({ items: range(1, 3), nextCursor: null });
     store.decide('like');
-    const put = http.expectOne('/api/likes/1');
+    const put = http.expectOne('/api/likes/1?source=SWIPE');
     expect(put.request.method).toBe('PUT');
     put.flush(null);
 
     store.decide('pass');
     http.expectNone((r) => r.url.startsWith('/api/likes/2'));
+    expect(http.expectOne('/api/titles/2/signals/PASS?source=SWIPE').request.method).toBe('PUT');
 
-    store.undo(); // desfaz o pass: nada no back
+    store.undo(); // desfaz o pass
+    expect(http.expectOne('/api/titles/2/signals/PASS?source=SWIPE').request.method).toBe('DELETE');
     store.undo(); // desfaz o like
-    const del = http.expectOne('/api/likes/1');
+    const del = http.expectOne('/api/likes/1?source=SWIPE');
     expect(del.request.method).toBe('DELETE');
+  });
+
+  it('talvez e já vi também vão para o back', () => {
+    store.start();
+    deck().flush({ items: range(1, 3), nextCursor: null });
+    store.decide('maybe');
+    store.decide('seen');
+    http.expectOne('/api/titles/1/signals/MAYBE?source=SWIPE');
+    http.expectOne('/api/titles/2/signals/SEEN?source=SWIPE');
   });
 });

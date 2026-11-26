@@ -40,6 +40,23 @@ describe('DetailsPage', () => {
     expect(document.title).toBe('Interestelar · wannawatch?');
   });
 
+  it('"Já vi" é um botão de alternar que vai para o back e desfaz se ele recusar', async () => {
+    const { fixture, el } = await render('79');
+    http.expectOne('/api/titles/79').flush(detail());
+    await fixture.whenStable();
+    const seen = [...el.querySelectorAll<HTMLButtonElement>('.actions button')].find((b) => b.textContent?.includes('Já vi'))!;
+    expect(seen.getAttribute('aria-pressed')).toBe('false');
+
+    seen.click();
+    await fixture.whenStable();
+    expect(seen.getAttribute('aria-pressed')).toBe('true');
+    const put = http.expectOne('/api/titles/79/signals/SEEN?source=DETAILS');
+    expect(put.request.method).toBe('PUT');
+    put.flush(null, { status: 500, statusText: 'Erro' });
+    await fixture.whenStable();
+    expect(seen.getAttribute('aria-pressed')).toBe('false');
+  });
+
   it('esconde o trailer e avisa quando não há onde assistir', async () => {
     const { fixture, el } = await render('79');
     const empty = { link: null, streaming: [], free: [], ads: [], rent: [], buy: [] };
