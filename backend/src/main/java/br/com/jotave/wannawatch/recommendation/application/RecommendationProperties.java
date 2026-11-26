@@ -1,6 +1,7 @@
 package br.com.jotave.wannawatch.recommendation.application;
 
 import br.com.jotave.wannawatch.recommendation.domain.FeatureWeights;
+import br.com.jotave.wannawatch.recommendation.domain.GroupParams;
 import br.com.jotave.wannawatch.recommendation.domain.ScoringWeights;
 import br.com.jotave.wannawatch.recommendation.domain.SignalWeights;
 import java.time.Duration;
@@ -16,6 +17,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * @param maybeCooldown           por quanto tempo um "talvez" fica fora dos feeds
  * @param cacheTtl                quanto tempo o score de um usuário fica em cache (escritas invalidam antes)
  * @param feed                    Swipe e Reels
+ * @param group                   deck do Match
  */
 @ConfigurationProperties("wannawatch.recommendation")
 public record RecommendationProperties(
@@ -28,7 +30,8 @@ public record RecommendationProperties(
         Diversity diversity,
         Duration maybeCooldown,
         Duration cacheTtl,
-        Feed feed) {
+        Feed feed,
+        GroupParams group) {
 
     public RecommendationProperties {
         if (features == null) features = FeatureWeights.defaults();
@@ -41,6 +44,7 @@ public record RecommendationProperties(
         if (maybeCooldown == null) maybeCooldown = Duration.ofDays(7);
         if (cacheTtl == null) cacheTtl = Duration.ofMinutes(10);
         if (feed == null) feed = new Feed(0.15, 5, 0.25, Duration.ofMinutes(30), 0.6, 0.4);
+        if (group == null) group = GroupParams.defaults();
     }
 
     /** No máximo {@code maxPerGenre} títulos com o mesmo gênero principal entre os {@code window} primeiros. */

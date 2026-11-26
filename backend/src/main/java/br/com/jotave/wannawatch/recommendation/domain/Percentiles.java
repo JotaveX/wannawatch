@@ -4,7 +4,10 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
-/** Percentil de cada valor dentro do conjunto: 0 = o menor, 1 = o maior; empates ficam juntos. */
+/**
+ * Percentil de cada valor dentro do conjunto: 0 = o menor, 1 = o maior. Empates ficam com o posto
+ * médio (seis títulos empatados no topo não podem ganhar o percentil do sexto colocado).
+ */
 public final class Percentiles {
 
     private Percentiles() {}
@@ -18,8 +21,19 @@ public final class Percentiles {
             return out;
         }
         double[] sorted = values.values().stream().mapToDouble(Double::doubleValue).sorted().toArray();
-        values.forEach((k, v) -> out.put(k, (double) lowerBound(sorted, v) / (n - 1)));
+        values.forEach((k, v) -> {
+            int less = lowerBound(sorted, v);
+            int equal = upperBound(sorted, v) - less;
+            out.put(k, (less + (equal - 1) / 2.0) / (n - 1));
+        });
         return out;
+    }
+
+    /** Quantos valores são menores ou iguais a {@code v}. */
+    private static int upperBound(double[] sorted, double v) {
+        int i = lowerBound(sorted, v);
+        while (i < sorted.length && sorted[i] == v) i++;
+        return i;
     }
 
     /** Quantos valores são estritamente menores que {@code v}. */

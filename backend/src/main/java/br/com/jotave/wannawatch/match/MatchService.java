@@ -11,6 +11,8 @@ import br.com.jotave.wannawatch.feedback.InteractionKind;
 import br.com.jotave.wannawatch.feedback.InteractionLog;
 import br.com.jotave.wannawatch.feedback.InteractionSource;
 import br.com.jotave.wannawatch.match.MatchDtos.Participant;
+import br.com.jotave.wannawatch.recommendation.application.GroupDecks;
+import br.com.jotave.wannawatch.recommendation.domain.GroupRanking;
 import br.com.jotave.wannawatch.match.MatchDtos.RoomResponse;
 import br.com.jotave.wannawatch.match.MatchDtos.RoomStatus;
 import br.com.jotave.wannawatch.shared.web.BadRequestException;
@@ -33,9 +35,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Salas de Match: todo mundo vota no mesmo deck (ordem aleatória fixa pela seed da sala, com os
- * filtros escolhidos por quem criou). A sala acaba no primeiro título que receber "quero ver" de
- * todos os participantes (mínimo de 2).
+ * Salas de Match: todo mundo vota no mesmo deck, com os filtros escolhidos por quem criou. A sala
+ * acaba no primeiro título que receber "quero ver" de todos os participantes (mínimo de 2).
+ *
+ * <p>O deck é calculado uma vez, quando o dono começa, pelo gosto de quem está na sala
+ * ({@link GroupDecks}) e guardado em match_room_deck: todos veem a mesma ordem, e quem sai depois
+ * não muda nada. Salas que começaram antes disso existir não têm esse snapshot e seguem na ordem
+ * aleatória fixa pela seed da sala.
  *
  * Ciclo: a sala nasce esperando (aparece na lista para todo mundo e qualquer um entra), o dono
  * começa quando tiver pelo menos 2 pessoas e daí em diante ninguém novo entra.
@@ -58,13 +64,15 @@ public class MatchService {
     private final TitleCards cards;
     private final Clock clock;
     private final InteractionLog log;
+    private final GroupDecks groupDecks;
     private final SecureRandom random = new SecureRandom();
 
-    public MatchService(JdbcClient jdbc, TitleCards cards, Clock clock, InteractionLog log) {
+    public MatchService(JdbcClient jdbc, TitleCards cards, Clock clock, InteractionLog log, GroupDecks groupDecks) {
         this.jdbc = jdbc;
         this.cards = cards;
         this.clock = clock;
         this.log = log;
+        this.groupDecks = groupDecks;
     }
 
     private record Room(long id, String code, long ownerId, MediaType mediaType, String genreSlug, String seed,
@@ -127,7 +135,25 @@ public class MatchService {
         Instant now = clock.instant();
         jdbc.sql("UPDATE match_room SET started_at = :at WHERE id = :r")
                 .param("at", Timestamp.from(now)).param("r", room.id()).update();
+        snapshotDeck(room);
         return view(lockedRoomById(room.id()));
+    }
+
+    /** Ordem do deck pelo gosto de quem está na sala agora (ainda sob o lock da sala). */
+    private void snapshotDeck(Room room) {
+        List<Long> participants = jdbc.sql("SELECT user_id FROM match_participant WHERE room_id = :r ORDER BY user_id")
+                .param("r", room.id()).query(Long.class).list();
+        Map<String, Object> params = new HashMap<>();
+        String sql = "SELECT t.id FROM title t WHERE t.overview IS NOT NULL"
+                + SqlFilters.typeAndGenre(room.mediaType(), room.genreSlug(), params);
+        List<Long> candidates = jdbc.sql(sql).params(params).query(Long.class).list();
+        List<GroupRanking.Ranked> ranked = groupDecks.rank(participants, candidates, room.seed());
+        for (int i = 0; i < ranked.size(); i++) {
+            jdbc.sql("""
+                    INSERT INTO match_room_deck (room_id, title_id, position, group_score) VALUES (:r, :t, :p, :s)""")
+                    .param("r", room.id()).param("t", ranked.get(i).titleId()).param("p", i)
+                    .param("s", ranked.get(i).score()).update();
+        }
     }
 
     /** O dono fecha a sala enquanto ela espera (o X na lista). Quem estava nela recebe 404 depois. */
@@ -214,11 +240,62 @@ public class MatchService {
                 .stream().map(this::view).toList();
     }
 
-    /** Deck da sala para quem pede: mesma ordem para todos, sem o que essa pessoa já votou. */
+    /**
+     * Deck da sala para quem pede: mesma ordem para todos, sem o que essa pessoa já votou. Cada
+     * carta vem com o motivo do ponto de vista de quem pediu ("Bom pra você e pra Bia").
+     */
     @Transactional(readOnly = true)
     public CursorResponse<TitleCard> deck(AuthUser user, String code, String cursor, int size) {
         Room room = participantRoom(user, code, false);
         requireStarted(room);
+        CursorResponse<Long> page = hasSnapshot(room.id())
+                ? snapshotDeck(room, user, cursor, size)
+                : seededDeck(room, user, cursor, size);
+        List<GroupDecks.Participant> members = jdbc.sql("""
+                SELECT u.id, u.display_name FROM match_participant p JOIN app_user u ON u.id = p.user_id
+                WHERE p.room_id = :r""")
+                .param("r", room.id())
+                .query((rs, n) -> new GroupDecks.Participant(rs.getLong("id"), rs.getString("display_name")))
+                .list();
+        var reasons = groupDecks.reasons(user.id(), members, page.items());
+        return new CursorResponse<>(cards.load(page.items(), reasons), page.nextCursor());
+    }
+
+    private boolean hasSnapshot(long roomId) {
+        return jdbc.sql("SELECT EXISTS (SELECT 1 FROM match_room_deck WHERE room_id = :r)")
+                .param("r", roomId).query(Boolean.class).single();
+    }
+
+    /** Pelo snapshot; o cursor é "p&lt;posição&gt;" da última carta. */
+    private CursorResponse<Long> snapshotDeck(Room room, AuthUser user, String cursor, int size) {
+        Cursor after = Cursor.decode(cursor);
+        int from = -1;
+        if (after != null) {
+            try {
+                if (!after.key().startsWith("p")) throw new NumberFormatException();
+                from = Integer.parseInt(after.key().substring(1));
+            } catch (NumberFormatException e) {
+                throw new BadRequestException("Cursor inválido.");
+            }
+        }
+        record Row(long id, int position) {}
+        List<Row> rows = jdbc.sql("""
+                SELECT d.title_id, d.position FROM match_room_deck d
+                WHERE d.room_id = :room AND d.position > :from
+                  AND NOT EXISTS (SELECT 1 FROM match_vote v
+                                  WHERE v.room_id = :room AND v.user_id = :me AND v.title_id = d.title_id)
+                ORDER BY d.position LIMIT :limit""")
+                .param("room", room.id()).param("from", from).param("me", user.id()).param("limit", size + 1)
+                .query((rs, n) -> new Row(rs.getLong("title_id"), rs.getInt("position")))
+                .list();
+        boolean hasMore = rows.size() > size;
+        List<Row> page = hasMore ? rows.subList(0, size) : rows;
+        String next = hasMore ? new Cursor("p" + page.getLast().position(), page.getLast().id()).encode() : null;
+        return new CursorResponse<>(page.stream().map(Row::id).toList(), next);
+    }
+
+    /** Salas sem snapshot (começaram antes dele existir): ordem aleatória fixa pela seed da sala. */
+    private CursorResponse<Long> seededDeck(Room room, AuthUser user, String cursor, int size) {
         Cursor after = Cursor.decode(cursor);
         Map<String, Object> params = new HashMap<>();
         params.put("seed", room.seed());
@@ -247,24 +324,26 @@ public class MatchService {
         boolean hasMore = rows.size() > size;
         List<Row> page = hasMore ? rows.subList(0, size) : rows;
         String next = hasMore ? new Cursor(page.getLast().key(), page.getLast().id()).encode() : null;
-        return new CursorResponse<>(cards.load(page.stream().map(Row::id).toList()), next);
+        return new CursorResponse<>(page.stream().map(Row::id).toList(), next);
     }
 
     // ------------------------------------------------------------------ regras
 
     /**
      * Procura um título que todos os participantes (2 ou mais) curtiram. Se houver mais de um
-     * (pode acontecer quando alguém sai), vence o que vem primeiro no deck.
+     * (pode acontecer quando alguém sai), vence o que vem primeiro no deck: a posição no snapshot
+     * ou, nas salas antigas sem snapshot, a ordem do md5 da seed.
      */
     private Room settle(Room room) {
         int participants = participantCount(room.id());
         if (participants < MIN_PARTICIPANTS) return room;
         Optional<Long> winner = jdbc.sql("""
-                SELECT title_id FROM match_vote
-                WHERE room_id = :r AND liked
-                GROUP BY title_id
+                SELECT v.title_id FROM match_vote v
+                LEFT JOIN match_room_deck d ON d.room_id = v.room_id AND d.title_id = v.title_id
+                WHERE v.room_id = :r AND v.liked
+                GROUP BY v.title_id, d.position
                 HAVING count(*) = :n
-                ORDER BY md5(:seed || ':' || title_id), title_id
+                ORDER BY d.position NULLS LAST, md5(:seed || ':' || v.title_id), v.title_id
                 LIMIT 1""")
                 .param("r", room.id()).param("n", participants).param("seed", room.seed())
                 .query(Long.class).optional();

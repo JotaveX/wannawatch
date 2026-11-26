@@ -1,6 +1,7 @@
 package br.com.jotave.wannawatch.recommendation.application;
 
 import br.com.jotave.wannawatch.recommendation.domain.Exclusion;
+import br.com.jotave.wannawatch.recommendation.domain.SeededNoise;
 import br.com.jotave.wannawatch.recommendation.domain.TasteProfile;
 import br.com.jotave.wannawatch.recommendation.domain.TitleFeatureIndex;
 import br.com.jotave.wannawatch.recommendation.domain.UserScores;

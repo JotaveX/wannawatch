@@ -1,4 +1,4 @@
-package br.com.jotave.wannawatch.recommendation.application;
+package br.com.jotave.wannawatch.recommendation.domain;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;

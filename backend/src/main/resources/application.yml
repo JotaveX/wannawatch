@@ -125,3 +125,19 @@ wannawatch:
       max-per-genre: 3
     maybe-cooldown: 7d
     cache-ttl: 10m
+    feed:
+      swipe-noise: 0.15             # ordem do Swipe = score + 0.15·ruído(seed, id)
+      exploration-every: 5          # 1 carta de exploração a cada 5 (0 desliga)
+      exploration-genre-share: 0.25 # "pouco peso" = até 25% do gênero mais forte
+      snapshot-ttl: 30m             # ordem guardada por visita, para a paginação
+      reels-score: 0.6              # ordem do Reels = 0.6·score + 0.4·popularidade
+      reels-popularity: 0.4
+    # deck do Match: média dos percentis − λ·desvio, sem miséria
+    group:
+      lambda: 0.5
+      misery-threshold: 0.25        # alguém abaixo disso → fim do deck
+      like-bonus: 0.15              # por participante que quer ver
+      seen-penalty: 0.20            # por participante que já viu
+      noise: 0.05
+      good-for-all: 0.6             # "Bom pra você e pra Bia"
+      shared-genre-share: 0.5       # "Todo mundo curte X"

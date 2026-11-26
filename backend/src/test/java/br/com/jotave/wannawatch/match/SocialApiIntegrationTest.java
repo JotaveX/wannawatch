@@ -19,6 +19,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import br.com.jotave.wannawatch.TestcontainersConfiguration;
+import br.com.jotave.wannawatch.recommendation.application.RecommendationService;
+import br.com.jotave.wannawatch.recommendation.application.TitleFeatureIndexHolder;
 import com.jayway.jsonpath.JsonPath;
 import java.util.ArrayList;
 import java.util.List;
@@ -46,6 +48,8 @@ class SocialApiIntegrationTest {
 
     @Autowired MockMvc mvc;
     @Autowired JdbcClient jdbc;
+    @Autowired TitleFeatureIndexHolder indexHolder;
+    @Autowired RecommendationService recommendations;
 
     long m1, m2, m3, s1;
     String jotave, bia, caio;
@@ -67,6 +71,8 @@ class SocialApiIntegrationTest {
         m2 = title(2, "MOVIE", "Filme Dois", drama);
         m3 = title(3, "MOVIE", "Filme Três", drama);
         s1 = title(4, "SERIES", "Série Um", comedy);
+        indexHolder.rebuild();
+        recommendations.clearCache();
         jotave = login("jotave");
         bia = login("bia");
         caio = login("caio");
