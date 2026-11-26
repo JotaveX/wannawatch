@@ -55,6 +55,10 @@ management:
 wannawatch:
   mail:
     from: ${MAIL_FROM:wannawatch? <nao-responda@wannawatch.local>}
+    # Preenchida, o código vai pela API do Resend em vez do SMTP acima.
+    resend:
+      api-key: ${RESEND_API_KEY:}
+      base-url: https://api.resend.com
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:4200}
   images:

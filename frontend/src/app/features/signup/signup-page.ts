@@ -5,7 +5,6 @@ import {
   effect,
   inject,
   input,
-  isDevMode,
   untracked,
 } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
@@ -41,7 +40,6 @@ export class SignupPage {
 
   protected readonly auth = inject(AuthStore);
   private readonly router = inject(Router);
-  protected readonly dev = isDevMode();
 
   protected readonly steps = STEPS;
   protected readonly step = this.auth.signupStep;

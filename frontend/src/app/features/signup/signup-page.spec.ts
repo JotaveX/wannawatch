@@ -152,13 +152,14 @@ describe('SignupPage', () => {
     const go = vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
     const { fixture, el, type } = await render('/swipe');
 
-    type('code', '12');
+    expect(el.querySelectorAll('input[name^="digit-"]').length).toBe(6);
+    type('digit-0', '12');
     el.querySelector('form')!.dispatchEvent(new Event('submit'));
     await fixture.whenStable();
     expect(el.querySelector('[role="alert"]')?.textContent).toBe('O código tem 6 números.');
 
-    type('code', '123 456');
-    el.querySelector('form')!.dispatchEvent(new Event('submit'));
+    // código completo (autopreenchido ou colado) já é conferido, sem clicar
+    type('digit-0', '123 456');
     const req = http.expectOne('/api/auth/email/verify');
     expect(req.request.body).toEqual({ code: '123456' });
     req.flush(done);

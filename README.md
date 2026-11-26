@@ -39,9 +39,11 @@ O `.env` fica fora do git. Ele é lido pelo docker-compose e pelo back-end. Pree
   <https://www.themoviedb.org/settings/api> (uso não comercial é gratuito).
 - `ADMIN_TOKEN`: qualquer valor secreto; protege o endpoint que dispara a importação.
   Gere um com `openssl rand -hex 16`. Vazio = endpoint desligado.
-- `MAIL_*`: SMTP do código de confirmação do cadastro. O padrão é o Mailpit do docker-compose
-  (nada sai de verdade; a caixa de entrada fica em <http://localhost:8025>). Para mandar de
-  verdade, aponte para um SMTP real e preencha usuário, senha, `MAIL_SMTP_AUTH` e `MAIL_STARTTLS`.
+- `RESEND_API_KEY`: chave do [Resend](https://resend.com/api-keys). Preenchida, o código de
+  confirmação do cadastro sai pela API do Resend, e `MAIL_FROM` precisa ser de um domínio
+  verificado lá (com `onboarding@resend.dev` só chega no e-mail do dono da conta).
+- `MAIL_*`: SMTP usado quando `RESEND_API_KEY` está vazia. O padrão é o Mailpit do docker-compose
+  (nada sai de verdade; a caixa de entrada fica em <http://localhost:8025>).
 
 Portas padrão (mude no `.env` se precisar):
 
