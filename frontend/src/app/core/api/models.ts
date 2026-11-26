@@ -40,6 +40,17 @@ export interface TitleCard {
   reason: Reason | null;
 }
 
+/** Vídeo curto aprovado de um título; toca pelo embed do YouTube (`key` = id do vídeo). */
+export interface ReelVideo {
+  platform: 'YOUTUBE';
+  key: string;
+}
+
+/** Item do Reels: o card e, se o título tiver vídeo aprovado, o vídeo. */
+export interface ReelCard extends TitleCard {
+  video: ReelVideo | null;
+}
+
 export type ReasonKind = 'BECAUSE_LIKED' | 'PERSON' | 'GENRE' | 'GROUP' | 'WANTED_BY' | 'POPULAR';
 
 /** Motivo da recomendação, com o texto pronto ("Porque você curtiu Dark", "Bom pra você e pra Bia"). */

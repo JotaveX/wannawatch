@@ -1,4 +1,4 @@
-import { HomeResponse, TitleCard, TitleDetail } from '../app/core/api/models';
+import { HomeResponse, ReelCard, TitleCard, TitleDetail } from '../app/core/api/models';
 
 export function card(id: number, over: Partial<TitleCard> = {}): TitleCard {
   return {
@@ -19,15 +19,34 @@ export function card(id: number, over: Partial<TitleCard> = {}): TitleCard {
   };
 }
 
+/** Item do Reels; sem `video` é um reel de sinopse. */
+export function reel(id: number, over: Partial<ReelCard> = {}): ReelCard {
+  return { ...card(id), video: null, ...over };
+}
+
 const range = (from: number, n: number) => Array.from({ length: n }, (_, i) => card(from + i));
 
 export function homeResponse(over: Partial<HomeResponse> = {}): HomeResponse {
   return {
-    hero: { ...card(1, { title: 'Noite em Marte' }), tagline: 'Ninguém fica sozinho', trailerUrl: 'https://www.youtube.com/watch?v=abc' },
+    hero: {
+      ...card(1, { title: 'Noite em Marte' }),
+      tagline: 'Ninguém fica sozinho',
+      trailerUrl: 'https://www.youtube.com/watch?v=abc',
+    },
     rows: [
       { key: 'top10', kind: 'TOP10', title: 'Top 10 de hoje no wannawatch?', items: range(1, 10) },
-      { key: 'similar', kind: 'SIMILAR', title: 'Porque você curtiu Noite em Marte', items: range(20, 15) },
-      { key: 'binge', kind: 'BINGE', title: 'Séries pra maratonar', items: range(40, 15).map((c) => ({ ...c, mediaType: 'SERIES', seasonsCount: 3 })) },
+      {
+        key: 'similar',
+        kind: 'SIMILAR',
+        title: 'Porque você curtiu Noite em Marte',
+        items: range(20, 15),
+      },
+      {
+        key: 'binge',
+        kind: 'BINGE',
+        title: 'Séries pra maratonar',
+        items: range(40, 15).map((c) => ({ ...c, mediaType: 'SERIES', seasonsCount: 3 })),
+      },
     ],
     ...over,
   };

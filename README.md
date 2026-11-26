@@ -4,7 +4,7 @@ Recomendação de filmes e séries — sozinho ou com a galera. Quatro jeitos de
 
 - **Início**: vitrine no estilo Netflix, com destaque, Top 10, "Seus amigos curtiram" e fileiras por tema.
 - **Swipe**: cartas no estilo Tinder — passa, talvez, quero ver ou já assisti.
-- **Reels**: feed vertical de sinopses no estilo TikTok.
+- **Reels**: feed vertical no estilo TikTok: vídeo curto quando o título tem um aprovado, senão a sinopse.
 - **Match**: swipe em conjunto numa sala; acaba no primeiro título que todo mundo quiser ver.
 
 Tudo isso é recomendado pelo seu gosto (e, no Match, pelo gosto do grupo), com o motivo escrito no
@@ -92,7 +92,7 @@ Documentação interativa (Swagger): <http://localhost:8081/swagger-ui.html>
 | `GET /api/titles/{id}` | Detalhe completo: elenco, equipe, trailer, onde assistir, parecidos |
 | `GET /api/home` | Destaque e fileiras da Home (com login: personalizadas, com "Pra você") |
 | `GET /api/swipe/deck?seed=&cursor=&size=` | Deck do Swipe: com login, personalizado (varia com a `seed`); sem, aleatório fixo por `seed` |
-| `GET /api/reels?cursor=&size=` | Feed do Reels: com login, personalizado; sem, por popularidade |
+| `GET /api/reels?cursor=&size=` | Feed do Reels: com login, personalizado; sem, por popularidade. Cada item traz `video` (`{ platform, key }`) quando o título tem vídeo aprovado, senão `null` |
 | `GET /api/search?q=&page=&size=` | Busca fuzzy por título, pessoa e gênero |
 | `POST /api/auth/login` · `POST /api/auth/logout` · `GET /api/auth/me` | Login por usuário ou e-mail (devolve o token e a etapa do cadastro em `account`) |
 | `GET /api/auth/account` | Quem está logado e em que etapa do cadastro está (`{ user, account }`) |
@@ -206,8 +206,22 @@ Em teste: achar vídeos curtos de cada título para o Reels virar vídeo de verd
 - Cada título buscado fica em `title_video_search`, mesmo sem resultado, e não é buscado de novo
   (a não ser pedindo por `titleIds`). A cota padrão é de 100 buscas por dia.
 - Tudo entra como `PENDING`; a revisão é em `/admin/videos`, só para administradores
-  (`app_user.is_admin`; hoje só o `jvpiloni`, marcado na migration V12). O Reels ainda não usa
-  esses vídeos.
+  (`app_user.is_admin`; hoje só o `jvpiloni`, marcado na migration V12).
+- **No Reels**: entra o vídeo aprovado, embutível e não bloqueado no Brasil (com mais de um, o mais
+  bem colocado na busca). Só o reel na tela monta o player (`youtube-nocookie.com`, sem os controles
+  do YouTube, em loop); ele começa sem som e toca sozinho, a não ser com `prefers-reduced-motion`,
+  que espera o play. O vídeo ocupa o reel inteiro, sem o pôster atrás, e nada da interface do
+  YouTube aparece: o iframe só fica visível depois que o vídeo começa a tocar; é maior que o reel,
+  então o título e as marcas de cima e de baixo ficam cortados para fora; toda vez que volta a tocar
+  (começo, retomar, loop) o YouTube desenha por ~4s um ícone de pausa no meio, e o nosso botão do
+  meio (opaco, maior) fica por cima dele esse tempo; o loop é nosso (volta ao início um pouco antes
+  do fim, porque o loop do YouTube mostra "Mais vídeos" e setas); e só mandamos `playVideo` quando a
+  pessoa retoma (o autoplay toca sozinho). Pausado, o quadro parado (limpo) fica na tela com o nosso
+  botão de play. Som, volume (controle deslizante de 0 a 100) e
+  pausa são nossos, valem para o feed todo e vão para o player por `postMessage`. Por cima do vídeo
+  fica só o título e a linha de informações, sem card; os amigos que curtiram flutuam como esferas
+  sem texto, e o nome aparece ao passar o mouse, focar ou tocar. Os botões de ação ficam só no ícone
+  (o "quero ver" mostra a contagem quando alguém quer ver).
 
 ### Atribuição
 
@@ -242,7 +256,7 @@ Busca usam o menu em pílula no topo.
 Atalhos de teclado:
 
 - **Swipe**: `→` quero ver, `←` passa, `↑` talvez, `↓` já assisti, `Z` volta o último.
-- **Reels**: `↓`/`J` próximo, `↑`/`K` anterior, `L` quero ver, `S` salvar.
+- **Reels**: `↓`/`J` próximo, `↑`/`K` anterior, `L` quero ver, `S` salvar, `M` som e `P` pausa (nos reels com vídeo).
 - **Match**: `→` quero ver, `←` passa, `Z` volta o último.
 
 ## Cadastro, login, amigos e Match
@@ -339,11 +353,12 @@ Onde entra:
   com uma variação por visita (a seed), e a cada 5 cartas uma é de exploração: bem avaliada, de um
   gênero que você quase não curte.
 - **Reels**: tira o que você já viu ou passou, deixa os curtidos no fim e ordena por
-  `0,6·score + 0,4·popularidade`.
+  `0,6·score + 0,4·popularidade + 0,15` (o `+ 0,15` só para quem tem vídeo aprovado). Sem login,
+  a ordem é `0,4·popularidade + 0,15 se tiver vídeo`.
 - Swipe e Reels guardam a ordem calculada na primeira página por 30 minutos. A paginação segue
   essa ordem e não pula nem repete nada enquanto o score muda com os seus swipes.
 - Sem login, a API devolve tudo como antes (Swipe aleatório fixo pela seed, Reels por
-  popularidade), sem motivo.
+  popularidade com o reforço do vídeo), sem motivo.
 
 ## Acessibilidade
 

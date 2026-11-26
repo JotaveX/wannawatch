@@ -1,10 +1,13 @@
 package br.com.jotave.wannawatch.catalog.application;
 
 import br.com.jotave.wannawatch.auth.AuthUser;
+import br.com.jotave.wannawatch.catalog.api.CatalogDtos.ReelCard;
+import br.com.jotave.wannawatch.catalog.api.CatalogDtos.ReelVideo;
 import br.com.jotave.wannawatch.catalog.api.CatalogDtos.TitleCard;
 import br.com.jotave.wannawatch.catalog.domain.MediaType;
 import br.com.jotave.wannawatch.recommendation.application.FeedSnapshots;
 import br.com.jotave.wannawatch.recommendation.application.PersonalizedFeeds;
+import br.com.jotave.wannawatch.recommendation.application.RecommendationProperties;
 import br.com.jotave.wannawatch.recommendation.application.RecommendationService;
 import br.com.jotave.wannawatch.shared.web.BadRequestException;
 import br.com.jotave.wannawatch.shared.web.Cursor;
@@ -26,6 +29,9 @@ import org.springframework.transaction.annotation.Transactional;
  * são personalizados ({@link PersonalizedFeeds}): a primeira página monta a ordem inteira e guarda
  * num snapshot ({@link FeedSnapshots}), e o cursor passa a ser a posição nele. Assim a paginação
  * não pula nem repete nada enquanto o score muda com os swipes.
+ *
+ * <p>No Reels, quem tem vídeo aprovado ({@link ReelVideos}) ganha um reforço na ordem e vem com o
+ * vídeo; o resto continua sendo reel de sinopse.
  */
 @Service
 @Transactional(readOnly = true)
@@ -36,24 +42,33 @@ public class FeedService {
     private final PersonalizedFeeds personalized;
     private final FeedSnapshots snapshots;
     private final RecommendationService recommendations;
+    private final ReelVideos videos;
+    private final RecommendationProperties props;
 
     public FeedService(JdbcClient jdbc, TitleCards cards, PersonalizedFeeds personalized, FeedSnapshots snapshots,
-                       RecommendationService recommendations) {
+                       RecommendationService recommendations, ReelVideos videos, RecommendationProperties props) {
         this.jdbc = jdbc;
         this.cards = cards;
         this.personalized = personalized;
         this.snapshots = snapshots;
         this.recommendations = recommendations;
+        this.videos = videos;
+        this.props = props;
     }
 
-    public CursorResponse<TitleCard> reels(Optional<AuthUser> user, String cursor, int size, MediaType type,
-                                           String genre) {
+    public CursorResponse<ReelCard> reels(Optional<AuthUser> user, String cursor, int size, MediaType type,
+                                          String genre) {
+        CursorResponse<TitleCard> page;
         if (user.isPresent()) {
             long me = user.get().id();
-            return fromSnapshot(me, FeedSnapshots.key(me, "reels", "", type, genre), cursor, size,
-                    () -> personalized.reelsOrder(me, candidates(type, genre)));
+            page = fromSnapshot(me, FeedSnapshots.key(me, "reels", "", type, genre), cursor, size,
+                    () -> personalized.reelsOrder(me, candidates(type, genre), videos.titlesWithVideo()));
+        } else {
+            page = reels(cursor, size, type, genre);
         }
-        return reels(cursor, size, type, genre);
+        Map<Long, ReelVideo> byTitle = videos.forTitles(page.items().stream().map(TitleCard::id).toList());
+        return new CursorResponse<>(page.items().stream().map(c -> new ReelCard(c, byTitle.get(c.id()))).toList(),
+                page.nextCursor());
     }
 
     public CursorResponse<TitleCard> swipeDeck(Optional<AuthUser> user, String seed, String cursor, int size,
@@ -103,21 +118,34 @@ public class FeedService {
         return jdbc.sql(sql).params(params).query(Long.class).list();
     }
 
-    public CursorResponse<TitleCard> reels(String cursor, int size, MediaType type, String genre) {
+    /**
+     * Reels sem login: {@code reelsPopularity·percentil da popularidade + reelsVideoBoost} (se tiver
+     * vídeo), a mesma conta do personalizado sem a parte do gosto. Cursor = (chave, id).
+     */
+    private CursorResponse<TitleCard> reels(String cursor, int size, MediaType type, String genre) {
         Cursor after = Cursor.decode(cursor);
         Map<String, Object> params = new HashMap<>();
-        StringBuilder sql = new StringBuilder("SELECT t.id, t.popularity FROM title t WHERE t.overview IS NOT NULL");
+        params.put("wp", props.feed().reelsPopularity());
+        params.put("wv", props.feed().reelsVideoBoost());
+        StringBuilder sql = new StringBuilder("""
+                SELECT id, k FROM (
+                    SELECT t.id,
+                           :wp * percent_rank() OVER (ORDER BY t.popularity)
+                           + CASE WHEN EXISTS (SELECT 1 FROM title_video v WHERE v.title_id = t.id AND\s""");
+        sql.append(ReelVideos.PLAYABLE).append(") THEN :wv ELSE 0 END AS k");
+        sql.append(" FROM title t WHERE t.overview IS NOT NULL");
         sql.append(SqlFilters.typeAndGenre(type, genre, params));
+        sql.append(") r");
         if (after != null) {
-            sql.append(" AND (t.popularity, t.id) < (:cp, :cid)");
-            params.put("cp", after.keyAsDouble());
+            sql.append(" WHERE (k, id) < (:ck, :cid)");
+            params.put("ck", after.keyAsDouble());
             params.put("cid", after.id());
         }
-        sql.append(" ORDER BY t.popularity DESC, t.id DESC LIMIT :limit");
+        sql.append(" ORDER BY k DESC, id DESC LIMIT :limit");
         params.put("limit", size + 1);
 
         List<Row> rows = jdbc.sql(sql.toString()).params(params)
-                .query((rs, n) -> new Row(rs.getLong("id"), Double.toString(rs.getDouble("popularity"))))
+                .query((rs, n) -> new Row(rs.getLong("id"), Double.toString(rs.getDouble("k"))))
                 .list();
         return page(rows, size);
     }

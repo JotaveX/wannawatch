@@ -183,6 +183,25 @@ class CatalogApiIntegrationTest {
         }
 
         @Test
+        void tituloComVideoAprovadoVemComOVideoEGanhaReforcoNaOrdem() throws Exception {
+            video(t7, "segundoLugr", 1, "APPROVED", true);
+            video(t7, "primeiroLug", 0, "APPROVED", true);
+            video(t5, "reprovado01", 0, "REJECTED", true);
+            video(t6, "semEmbed001", 0, "APPROVED", false);
+
+            // t7 é o menos popular, mas o reforço do vídeo passa ele na frente de t5 e t6
+            assertThat(walk("/api/reels", Map.of("size", "2"))).containsExactly(t1, t2, t3, t7, t6, t5);
+            mvc.perform(get("/api/reels").param("size", "10"))
+                    .andExpect(jsonPath("$.items[3].id").value(t7))
+                    .andExpect(jsonPath("$.items[3].video.platform").value("YOUTUBE"))
+                    .andExpect(jsonPath("$.items[3].video.key").value("primeiroLug"))
+                    .andExpect(jsonPath("$.items[3].title").value("Ilha dos Ecos"))
+                    // reprovado e sem embed não contam
+                    .andExpect(jsonPath("$.items[4].video").doesNotExist())
+                    .andExpect(jsonPath("$.items[5].video").doesNotExist());
+        }
+
+        @Test
         void cursorInvalidoDa400() throws Exception {
             mvc.perform(get("/api/reels").param("cursor", "nao-e-um-cursor"))
                     .andExpect(status().isBadRequest())
@@ -327,6 +346,14 @@ class CatalogApiIntegrationTest {
                     .param("t", id).param("g", genreIds[i]).param("p", i).update();
         }
         return id;
+    }
+
+    private void video(long titleId, String key, int rank, String status, boolean embeddable) {
+        jdbc.sql("""
+                INSERT INTO title_video (title_id, source, platform, external_key, search_rank, status, embeddable)
+                VALUES (:t, 'YOUTUBE_SEARCH', 'YOUTUBE', :k, :r, :s, :e)""")
+                .param("t", titleId).param("k", key).param("r", rank).param("s", status).param("e", embeddable)
+                .update();
     }
 
     private long person(int ext, String name) {

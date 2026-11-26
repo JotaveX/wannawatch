@@ -43,7 +43,7 @@ public record RecommendationProperties(
         if (diversity == null) diversity = new Diversity(10, 3);
         if (maybeCooldown == null) maybeCooldown = Duration.ofDays(7);
         if (cacheTtl == null) cacheTtl = Duration.ofMinutes(10);
-        if (feed == null) feed = new Feed(0.15, 5, 0.25, Duration.ofMinutes(30), 0.6, 0.4);
+        if (feed == null) feed = new Feed(0.15, 5, 0.25, Duration.ofMinutes(30), 0.6, 0.4, 0.15);
         if (group == null) group = GroupParams.defaults();
     }
 
@@ -56,7 +56,8 @@ public record RecommendationProperties(
      * @param explorationGenreShare gênero "com pouco peso" = peso até essa fração do gênero mais forte
      * @param snapshotTtl           quanto tempo a ordem de uma visita fica guardada para a paginação
      * @param reelsScore            ordem do Reels = reelsScore·score + reelsPopularity·popularidade
+     *                              + reelsVideoBoost (só para quem tem vídeo aprovado)
      */
     public record Feed(double swipeNoise, int explorationEvery, double explorationGenreShare, Duration snapshotTtl,
-                       double reelsScore, double reelsPopularity) {}
+                       double reelsScore, double reelsPopularity, double reelsVideoBoost) {}
 }

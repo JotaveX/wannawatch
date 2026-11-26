@@ -8,6 +8,7 @@ import {
   HomeResponse,
   MediaType,
   Page,
+  ReelCard,
   SearchHit,
   TitleCard,
   TitleDetail,
@@ -54,8 +55,8 @@ export class CatalogApi {
 
   reels(
     query: TitleFilters & { cursor?: string | null; size?: number } = {},
-  ): Observable<CursorPage<TitleCard>> {
-    return this.http.get<CursorPage<TitleCard>>(`${this.base}/reels`, { params: params(query) });
+  ): Observable<CursorPage<ReelCard>> {
+    return this.http.get<CursorPage<ReelCard>>(`${this.base}/reels`, { params: params(query) });
   }
 
   search(q: string, page = 0, size = 20): Observable<Page<SearchHit>> {

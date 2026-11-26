@@ -44,6 +44,12 @@ public final class CatalogDtos {
         }
     }
 
+    /** Vídeo curto aprovado de um título (toca pelo embed do YouTube; {@code key} é o id do vídeo). */
+    public record ReelVideo(String platform, String key) {}
+
+    /** Item do Reels: o card de sempre e, quando o título tem vídeo aprovado, o vídeo (senão nulo). */
+    public record ReelCard(@JsonUnwrapped TitleCard card, ReelVideo video) {}
+
     public record TitleDetail(
             @JsonUnwrapped TitleCard card,
             String originalTitle,

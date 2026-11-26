@@ -1,5 +1,14 @@
 import { DOCUMENT } from '@angular/common';
-import { ChangeDetectionStrategy, Component, computed, effect, ElementRef, inject, signal, viewChildren } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  effect,
+  ElementRef,
+  inject,
+  signal,
+  viewChildren,
+} from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { length, typeLabel } from '../../core/format';
 import { titleLink } from '../../core/title-link';
@@ -13,7 +22,7 @@ import { ReelItem } from './reel-item';
 import { ReelsStore } from './reels-store';
 import { LikedBy } from './liked-by';
 
-const KEYS: Record<string, 'prev' | 'next' | 'like' | 'save'> = {
+const KEYS: Record<string, 'prev' | 'next' | 'like' | 'save' | 'mute' | 'pause'> = {
   ArrowUp: 'prev',
   k: 'prev',
   K: 'prev',
@@ -24,9 +33,13 @@ const KEYS: Record<string, 'prev' | 'next' | 'like' | 'save'> = {
   L: 'like',
   s: 'save',
   S: 'save',
+  m: 'mute',
+  M: 'mute',
+  p: 'pause',
+  P: 'pause',
 };
 
-/** Feed vertical de sinopses (estilo TikTok), só individual. */
+/** Feed vertical (estilo TikTok), só individual: vídeo quando o título tem um aprovado, senão a sinopse. */
 @Component({
   selector: 'ww-reels-page',
   imports: [RouterLink, ReelItem, Button, Icon, IconButton, Mascot, LikedBy],
@@ -42,14 +55,21 @@ export class ReelsPage {
   protected readonly signals = inject(SignalsStore);
   private readonly document = inject(DOCUMENT);
   private readonly reels = viewChildren(ReelItem, { read: ElementRef });
+  private readonly reelItems = viewChildren(ReelItem);
 
   protected readonly active = signal(0);
   protected readonly toast = signal<string | null>(null);
+  /** começa sem som (o navegador só deixa tocar sozinho assim); vale para o feed todo */
+  protected readonly muted = signal(true);
+  /** volume de 0 a 100, também do feed todo */
+  protected readonly volume = signal(100);
 
   protected readonly current = computed(() => this.store.items()[this.active()] ?? null);
   protected readonly facts = computed(() => {
     const c = this.current();
-    return c ? [typeLabel(c), c.year ? String(c.year) : null, length(c)].filter(Boolean).join(' · ') : '';
+    return c
+      ? [typeLabel(c), c.year ? String(c.year) : null, length(c)].filter(Boolean).join(' · ')
+      : '';
   });
   protected readonly titleLink = titleLink;
 
@@ -74,6 +94,18 @@ export class ReelsPage {
 
   protected toggleSaved(id: number): void {
     this.signals.toggle(id, 'SAVED', 'REELS');
+  }
+
+  protected toggleMute(): void {
+    // ligar o som com o volume no zero não adiantaria: volta para a metade
+    if (this.muted() && !this.volume()) this.volume.set(50);
+    this.muted.update((m) => !m);
+  }
+
+  /** Mexer no volume liga o som; levar ao zero é o mesmo que tirar o som. */
+  protected setVolume(value: number): void {
+    this.volume.set(value);
+    this.muted.set(value === 0);
   }
 
   protected go(delta: number): void {
@@ -106,7 +138,11 @@ export class ReelsPage {
   protected onKey(event: KeyboardEvent): void {
     if (event.altKey || event.ctrlKey || event.metaKey) return;
     const target = event.target;
-    if (target instanceof Element && target.closest('input, textarea, select, [contenteditable="true"]')) return;
+    if (
+      target instanceof Element &&
+      target.closest('input, textarea, select, [contenteditable="true"]')
+    )
+      return;
     const action = KEYS[event.key];
     const card = this.current();
     if (!action || !card) return;
@@ -114,7 +150,10 @@ export class ReelsPage {
     if (action === 'prev') this.go(-1);
     else if (action === 'next') this.go(1);
     else if (action === 'like') this.toggleLike(card.id);
-    else this.toggleSaved(card.id);
+    else if (action === 'save') this.toggleSaved(card.id);
+    else if (!card.video) return;
+    else if (action === 'mute') this.toggleMute();
+    else this.reelItems()[this.active()]?.togglePause();
   }
 
   private flash(text: string): void {

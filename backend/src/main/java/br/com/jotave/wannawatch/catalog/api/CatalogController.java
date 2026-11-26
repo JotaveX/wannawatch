@@ -3,6 +3,7 @@ package br.com.jotave.wannawatch.catalog.api;
 import br.com.jotave.wannawatch.auth.AuthUser;
 import br.com.jotave.wannawatch.catalog.api.CatalogDtos.GenreResponse;
 import br.com.jotave.wannawatch.catalog.api.CatalogDtos.HomeResponse;
+import br.com.jotave.wannawatch.catalog.api.CatalogDtos.ReelCard;
 import br.com.jotave.wannawatch.catalog.api.CatalogDtos.SearchHit;
 import br.com.jotave.wannawatch.catalog.api.CatalogDtos.TitleCard;
 import br.com.jotave.wannawatch.catalog.api.CatalogDtos.TitleDetail;
@@ -90,8 +91,8 @@ public class CatalogController {
     }
 
     @GetMapping("/reels")
-    @Operation(summary = "Feed do Reels, paginado por cursor: personalizado com login, por popularidade sem")
-    public CursorResponse<TitleCard> reels(
+    @Operation(summary = "Feed do Reels, paginado por cursor: personalizado com login, por popularidade sem; com o vídeo aprovado de cada título")
+    public CursorResponse<ReelCard> reels(
             @Parameter(hidden = true) Optional<AuthUser> user,
             @RequestParam(required = false) String cursor,
             @RequestParam(defaultValue = "10") @Min(1) @Max(50) int size,

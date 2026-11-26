@@ -158,6 +158,7 @@ wannawatch:
       snapshot-ttl: 30m             # ordem guardada por visita, para a paginação
       reels-score: 0.6              # ordem do Reels = 0.6·score + 0.4·popularidade
       reels-popularity: 0.4
+      reels-video-boost: 0.15       # + 0.15 para quem tem vídeo aprovado (também sem login)
     # deck do Match: média dos percentis − λ·desvio, sem miséria
     group:
       lambda: 0.5

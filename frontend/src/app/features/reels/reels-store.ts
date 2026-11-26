@@ -1,7 +1,7 @@
 import { DestroyRef, inject, Injectable, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CatalogApi } from '../../core/api/catalog-api';
-import { TitleCard } from '../../core/api/models';
+import { ReelCard } from '../../core/api/models';
 
 export const REELS_PAGE = 10;
 /** Busca mais quando faltam estes reels para o fim. */
@@ -17,7 +17,7 @@ export class ReelsStore {
   private cursor: string | null | undefined = undefined;
   private fetching = false;
 
-  readonly items = signal<TitleCard[]>([]);
+  readonly items = signal<ReelCard[]>([]);
   readonly status = signal<'loading' | 'ready' | 'error'>('loading');
   readonly loadingMore = signal(false);
   readonly done = signal(false);

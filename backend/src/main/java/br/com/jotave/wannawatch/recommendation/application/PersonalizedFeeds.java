@@ -65,8 +65,11 @@ public class PersonalizedFeeds {
         return interleave(main, sortDesc(exploration), feed.explorationEvery());
     }
 
-    /** {@code 0.6·score + 0.4·popularidade}; os curtidos vão para o fim (na mesma ordem). */
-    public List<Long> reelsOrder(long userId, List<Long> candidates) {
+    /**
+     * {@code 0.6·score + 0.4·popularidade}, mais um reforço para quem tem vídeo aprovado (o Reels
+     * fica mais interessante com vídeo); os curtidos vão para o fim (na mesma ordem).
+     */
+    public List<Long> reelsOrder(long userId, List<Long> candidates, Set<Long> withVideo) {
         UserScores scores = recommendations.scores(userId);
         LongPredicate excluded = recommendations.excluded(scores.profile(), REELS_EXCLUSIONS);
         RecommendationProperties.Feed feed = props.feed();
@@ -74,7 +77,8 @@ public class PersonalizedFeeds {
         for (long id : candidates) {
             if (excluded.test(id)) continue;
             double pop = scores.index().get(id).map(TitleFeatureIndex.Entry::popularity).orElse(0.0);
-            order.put(id, feed.reelsScore() * scores.score(id) + feed.reelsPopularity() * pop);
+            double boost = withVideo.contains(id) ? feed.reelsVideoBoost() : 0;
+            order.put(id, feed.reelsScore() * scores.score(id) + feed.reelsPopularity() * pop + boost);
         }
         List<Long> sorted = sortDesc(order);
         Set<Long> liked = scores.profile().liked();

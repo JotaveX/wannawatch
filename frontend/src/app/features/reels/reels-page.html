@@ -15,12 +15,17 @@
         </div>
       }
       @default {
-        <div class="feed" tabindex="-1" aria-label="Feed de sinopses">
+        <div class="feed" tabindex="-1" aria-label="Feed de reels">
           @for (card of store.items(); track card.id; let i = $index) {
             <ww-reel-item
               [card]="card"
               [index]="i"
               [eager]="i < 2"
+              [active]="i === active()"
+              [muted]="muted()"
+              [volume]="volume()"
+              (muteToggle)="toggleMute()"
+              (volumeChange)="setVolume($event)"
               [liked]="likes.likedByMe(card.id)"
               [saved]="signals.has(card.id, 'SAVED')"
               (like)="toggleLike(card.id)"
@@ -81,6 +86,8 @@
         <div><dt><kbd>↑</kbd> <kbd>K</kbd></dt><dd>Anterior</dd></div>
         <div><dt><kbd>L</kbd></dt><dd>Quero ver</dd></div>
         <div><dt><kbd>S</kbd></dt><dd>Salvar</dd></div>
+        <div><dt><kbd>M</kbd></dt><dd>Som do vídeo</dd></div>
+        <div><dt><kbd>P</kbd></dt><dd>Pausar o vídeo</dd></div>
       </dl>
       <p class="note">"Quero ver" fica salvo e aparece para os seus amigos. "Salvar" fica salvo só para você.</p>
     </section>

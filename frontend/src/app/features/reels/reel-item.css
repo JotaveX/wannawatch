@@ -6,6 +6,7 @@
 }
 article {
   position: relative;
+  container-type: size;
   display: flex;
   align-items: flex-end;
   gap: 12px;
@@ -24,6 +25,124 @@ article {
   position: absolute;
   inset: 0;
   background: rgba(20, 20, 22, 0.62);
+}
+/* vídeo 9:16 cobrindo o reel (como object-fit: cover) e mais alto que ele: o título e a marca do
+   YouTube ficam cortados para fora. Só aparece quando o player avisa que o vídeo está na tela.
+   Não recebe clique, para a rolagem passar. */
+.video {
+  --h: calc(max(100cqh, 100cqw * 16 / 9) + 160px);
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: calc(var(--h) * 9 / 16);
+  height: var(--h);
+  border: 0;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity var(--ww-fast) var(--ww-ease);
+}
+.video.on {
+  opacity: 1;
+}
+/* fica exatamente no meio do vídeo (o iframe é centralizado), onde o YouTube desenha o ícone dele;
+   opaco e maior que ele, para cobri-lo */
+.round.big {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 80px;
+  height: 80px;
+  background: var(--ww-white);
+  transform: translate(-50%, -50%);
+}
+.round.big:active {
+  transform: translate(-50%, -50%) scale(0.92);
+}
+.controls {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 1;
+  display: flex;
+  gap: 8px;
+}
+.volume {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-right: 14px;
+  border-radius: var(--ww-radius-pill);
+  background: rgba(20, 20, 22, 0.62);
+}
+.volume input {
+  width: 96px;
+  height: 44px;
+  margin: 0;
+  background: none;
+  cursor: pointer;
+  appearance: none;
+  /* o gesto no controle é dele: o feed não rola nem dá snap enquanto arrasta */
+  touch-action: none;
+}
+.volume input::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 2px;
+  background: linear-gradient(var(--ww-white), var(--ww-white)) 0 / var(--level, 0%) 100% no-repeat,
+    rgba(255, 255, 255, 0.45);
+}
+.volume input::-moz-range-track {
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.45);
+}
+.volume input::-moz-range-progress {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--ww-white);
+}
+.volume input::-webkit-slider-thumb {
+  width: 16px;
+  height: 16px;
+  margin-top: -6px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--ww-white);
+  appearance: none;
+}
+.volume input::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--ww-white);
+}
+.volume input:focus-visible {
+  outline: 2px solid var(--ww-white);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+.round.sm {
+  width: 44px;
+  height: 44px;
+}
+/* sobre o vídeo não há card: o texto ganha uma sombra firme para continuar legível */
+.has-video .text,
+.has-video .actions span {
+  text-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.9),
+    0 0 12px rgba(0, 0, 0, 0.6);
+}
+.text {
+  padding: 12px;
+}
+.has-video .actions span {
+  padding: 1px 6px;
+}
+button.outline {
+  background: none;
+  font-family: inherit;
+  cursor: pointer;
 }
 .text {
   position: relative;
@@ -64,24 +183,6 @@ h2 {
 }
 .name span {
   font-size: 13px;
-}
-.chips {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-}
-.outline {
-  display: inline-flex;
-  align-items: center;
-  min-height: 32px;
-  padding: 0 12px;
-  border: var(--ww-hairline) solid var(--ww-white);
-  border-radius: var(--ww-radius-pill);
-  color: var(--ww-white);
-  font-size: 13px;
-  font-weight: 600;
-  text-decoration: none;
 }
 .actions {
   position: relative;

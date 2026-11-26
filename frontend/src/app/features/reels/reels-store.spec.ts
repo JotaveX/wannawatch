@@ -14,7 +14,12 @@ describe('ReelsStore', () => {
 
   beforeEach(() => {
     TestBed.configureTestingModule({
-      providers: [ReelsStore, provideHttpClient(), provideHttpClientTesting(), { provide: API_BASE_URL, useValue: '/api' }],
+      providers: [
+        ReelsStore,
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: API_BASE_URL, useValue: '/api' },
+      ],
     });
     store = TestBed.inject(ReelsStore);
     http = TestBed.inject(HttpTestingController);
