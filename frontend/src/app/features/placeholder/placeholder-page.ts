@@ -5,8 +5,8 @@ import { Icon, IconName } from '../../shared/ui/icon';
 import { Mascot } from '../../shared/ui/mascot';
 
 /**
- * Tela provisória. Usada para o que ainda não existe (Grupos, Perfil, Séries, Filmes,
- * Minha lista) e para as telas das próximas fases. Texto vem do `data` da rota.
+ * Tela provisória. Usada para o que ainda não existe, para a página de "não encontrado" e para
+ * as telas das próximas fases. Texto vem do `data` da rota.
  */
 @Component({
   selector: 'ww-placeholder-page',

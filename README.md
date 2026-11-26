@@ -207,7 +207,7 @@ lateral. Os dados de "onde assistir" vêm da JustWatch, creditada em `/sobre` e 
 | `/perfil` | Seu perfil: números, curtidas por semana e últimos curtidos | claro |
 | `/ajustes` | Nome, cor, Bu, favoritos, conta e sair | claro |
 | `/sobre` | Sobre e créditos | claro |
-| `/series`, `/filmes`, `/minha-lista` | Provisórias ("em breve") | claro |
+| `/series`, `/filmes` | Por enquanto abrem a busca | escuro |
 | `/dev/componentes` | Vitrine de componentes (só em dev) | claro e escuro |
 
 No celular a navegação fica numa barra de abas embaixo. No desktop (a partir de 1024px), Swipe,
@@ -236,7 +236,7 @@ entra com o cadastro pela metade volta para a etapa que falta, em qualquer tela.
 usuário ou e-mail.
 
 Sem conta dá para **ver o catálogo**: Início, detalhes, busca, Séries, Filmes e Sobre. No lugar do
-avatar aparece "Entrar". Swipe, Reels, Match, Minha lista, perfil e ajustes pedem login (levam a
+avatar aparece "Entrar". Swipe, Reels, Match, perfil e ajustes pedem login (levam a
 `/entrar` e voltam depois); "Já vi" na página de detalhes também. As regras de quem vê o quê ficam
 no front: a API do Swipe e do Reels continua respondendo sem token (é só o catálogo, sem
 personalização).

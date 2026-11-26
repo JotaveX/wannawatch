@@ -27,7 +27,6 @@ export const SIDE_ITEMS: NavItem[] = [
   { label: 'Reels', path: '/reels', icon: 'reels' },
   { label: 'Séries', path: '/series', icon: 'tv' },
   { label: 'Filmes', path: '/filmes', icon: 'film' },
-  { label: 'Minha lista', path: '/minha-lista', icon: 'list' },
   { label: 'Match', path: '/match', icon: 'groups' },
   { label: 'Ajustes', path: '/ajustes', icon: 'settings' },
 ];

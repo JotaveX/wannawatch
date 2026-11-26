@@ -51,9 +51,9 @@ const open: Routes = [
   {
     path: 'filmes',
     title: 'Filmes · wannawatch?',
-    loadComponent: placeholder,
+    loadComponent: () => import('./features/search/search-page').then((m) => m.SearchPage),
     data: {
-      ...feed(),
+      ...feed('dark'),
       heading: 'Filmes',
       message: 'Uma vitrine só de filmes vem depois.',
       icon: 'film',
@@ -92,17 +92,6 @@ const members: Routes = [
     title: 'Sala de Match · wannawatch?',
     loadComponent: () => import('./features/match/match-room-page').then((m) => m.MatchRoomPage),
     data: feed(),
-  },
-  {
-    path: 'minha-lista',
-    title: 'Minha lista · wannawatch?',
-    loadComponent: placeholder,
-    data: {
-      ...feed(),
-      heading: 'Minha lista',
-      message: 'O que você salvar aparece aqui. Em breve.',
-      icon: 'list',
-    },
   },
   {
     path: 'perfil',

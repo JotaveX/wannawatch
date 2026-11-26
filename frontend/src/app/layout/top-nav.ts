@@ -240,7 +240,6 @@ export class TopNav {
     { label: 'Swipe', path: '/swipe' },
     { label: 'Reels', path: '/reels' },
     { label: 'Match', path: '/match' },
-    { label: 'Minha lista', path: '/minha-lista' },
   ];
 
   /**

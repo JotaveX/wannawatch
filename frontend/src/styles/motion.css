@@ -174,7 +174,7 @@
   --ww-i: 9;
   /*
    * Sobe em pixels inteiros e sem scale: o Chrome anima transform numa camada já rasterizada, e
-   * escala ou meio pixel deixam o texto borrado até a animação acabar (Perfil, Filmes, Minha lista).
+   * escala ou meio pixel deixam o texto borrado até a animação acabar (Perfil, páginas provisórias).
    */
   animation:
     ww-fade-in var(--ww-slow) var(--ww-ease-out) backwards,
