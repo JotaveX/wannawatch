@@ -15,7 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Login por usuário e senha, com token opaco. O token (aleatório, 256 bits) vai para o cliente;
+ * Login por usuário (ou e-mail) e senha, com token opaco. O token (aleatório, 256 bits) vai para o cliente;
  * no banco fica só o SHA-256 dele. A senha é conferida pelo próprio Postgres (bcrypt do pgcrypto).
  */
 @Service
@@ -38,14 +38,32 @@ public class AuthService {
     public Optional<Login> login(String username, String password) {
         Optional<AuthUser> user = jdbc.sql("""
                 SELECT %s FROM app_user u
-                WHERE u.username = lower(trim(:u)) AND u.password_hash = crypt(:p, u.password_hash)""".formatted(UserRef.COLUMNS))
+                WHERE (u.username = lower(trim(:u)) OR lower(u.email) = lower(trim(:u)))
+                  AND u.password_hash = crypt(:p, u.password_hash)""".formatted(UserRef.COLUMNS))
                 .param("u", username).param("p", password)
                 .query((rs, n) -> AuthUser.of(UserRef.from(rs)))
                 .optional();
-        return user.map(u -> new Login(createSession(u.id()), u));
+        return user.map(u -> new Login(startSession(u.id()), u));
     }
 
-    private String createSession(long userId) {
+    /** Em que etapa do cadastro a conta está. */
+    @Transactional(readOnly = true)
+    public AccountStatus status(long userId) {
+        return jdbc.sql("SELECT email, email_verified_at, titles_picked_at FROM app_user WHERE id = :id")
+                .param("id", userId)
+                .query((rs, n) -> new AccountStatus(rs.getString("email"),
+                        rs.getObject("email_verified_at") != null, rs.getObject("titles_picked_at") != null))
+                .single();
+    }
+
+    @Transactional(readOnly = true)
+    public UserRef ref(long userId) {
+        return jdbc.sql("SELECT %s FROM app_user u WHERE u.id = :id".formatted(UserRef.COLUMNS))
+                .param("id", userId).query((rs, n) -> UserRef.from(rs)).single();
+    }
+
+    /** Cria uma sessão nova e devolve o token (só ele; no banco fica o hash). */
+    public String startSession(long userId) {
         byte[] bytes = new byte[32];
         random.nextBytes(bytes);
         String token = Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
@@ -76,7 +94,7 @@ public class AuthService {
         jdbc.sql("DELETE FROM auth_session WHERE token_hash = :h").param("h", sha256(token)).update();
     }
 
-    static String sha256(String value) {
+    public static String sha256(String value) {
         try {
             byte[] digest = MessageDigest.getInstance("SHA-256").digest(value.getBytes(StandardCharsets.UTF_8));
             return HexFormat.of().formatHex(digest);

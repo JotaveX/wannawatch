@@ -5,12 +5,19 @@ import { provideRouter, Router } from '@angular/router';
 import { API_BASE_URL } from '../../core/api/api-config';
 import { LoginPage, safeReturn } from './login-page';
 
+const done = { email: 'x@exemplo.com', emailVerified: true, titlesPicked: true, complete: true };
+
 describe('LoginPage', () => {
   let http: HttpTestingController;
 
   beforeEach(() => {
     TestBed.configureTestingModule({
-      providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting(), { provide: API_BASE_URL, useValue: '/api' }],
+      providers: [
+        provideRouter([]),
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: API_BASE_URL, useValue: '/api' },
+      ],
     });
     http = TestBed.inject(HttpTestingController);
   });
@@ -58,8 +65,22 @@ describe('LoginPage', () => {
     await submit();
     const req = http.expectOne('/api/auth/login');
     expect(req.request.body.username).toBe('bia');
-    req.flush({ token: 't', user: { id: 2, username: 'bia', displayName: 'Bia' } });
+    req.flush({ token: 't', user: { id: 2, username: 'bia', displayName: 'Bia' }, account: done });
     expect(navigate).toHaveBeenCalledWith('/match/K7M2QX');
+  });
+
+  it('cadastro pela metade continua em /cadastro, guardando a volta', async () => {
+    const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+    const { type, submit } = await render('/swipe');
+    type('username', 'ana@exemplo.com');
+    type('password', 'senha-boa');
+    await submit();
+    http.expectOne('/api/auth/login').flush({
+      token: 't',
+      user: { id: 9, username: 'ana', displayName: 'Ana' },
+      account: { ...done, emailVerified: false, complete: false },
+    });
+    expect(navigate).toHaveBeenCalledWith(['/cadastro'], { queryParams: { volta: '/swipe' } });
   });
 });
 

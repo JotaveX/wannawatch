@@ -1,7 +1,7 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
-import { provideRouter, Router } from '@angular/router';
+import { provideRouter, Router, UrlTree } from '@angular/router';
 import { API_BASE_URL } from '../../core/api/api-config';
 import { detail } from '../../../testing/fixtures';
 import { DetailsPage } from './details-page';
@@ -11,10 +11,16 @@ describe('DetailsPage', () => {
 
   beforeEach(() => {
     TestBed.configureTestingModule({
-      providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting(), { provide: API_BASE_URL, useValue: '/api' }],
+      providers: [
+        provideRouter([]),
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: API_BASE_URL, useValue: '/api' },
+      ],
     });
     http = TestBed.inject(HttpTestingController);
   });
+  afterEach(() => localStorage.clear());
 
   async function render(id: string, mediaType: 'MOVIE' | 'SERIES' = 'MOVIE') {
     const fixture = TestBed.createComponent(DetailsPage);
@@ -40,11 +46,31 @@ describe('DetailsPage', () => {
     expect(document.title).toBe('Interestelar · wannawatch?');
   });
 
-  it('"Já vi" é um botão de alternar que vai para o back e desfaz se ele recusar', async () => {
+  it('sem login, "Já vi" leva para o login e volta para a página', async () => {
+    const router = TestBed.inject(Router);
+    const go = vi.spyOn(router, 'navigateByUrl').mockResolvedValue(true);
+    vi.spyOn(router, 'url', 'get').mockReturnValue('/filme/79');
     const { fixture, el } = await render('79');
     http.expectOne('/api/titles/79').flush(detail());
     await fixture.whenStable();
-    const seen = [...el.querySelectorAll<HTMLButtonElement>('.actions button')].find((b) => b.textContent?.includes('Já vi'))!;
+    [...el.querySelectorAll<HTMLButtonElement>('.actions button')]
+      .find((b) => b.textContent?.includes('Já vi'))!
+      .click();
+    expect(router.serializeUrl(go.mock.calls[0][0] as UrlTree)).toBe('/entrar?volta=%2Ffilme%2F79');
+    http.expectNone((r) => r.url.includes('/signals'));
+  });
+
+  it('"Já vi" é um botão de alternar que vai para o back e desfaz se ele recusar', async () => {
+    localStorage.setItem(
+      'ww.session',
+      JSON.stringify({ token: 't', user: { id: 1, username: 'jotave', displayName: 'Jotave' } }),
+    );
+    const { fixture, el } = await render('79');
+    http.expectOne('/api/titles/79').flush(detail());
+    await fixture.whenStable();
+    const seen = [...el.querySelectorAll<HTMLButtonElement>('.actions button')].find((b) =>
+      b.textContent?.includes('Já vi'),
+    )!;
     expect(seen.getAttribute('aria-pressed')).toBe('false');
 
     seen.click();
@@ -63,7 +89,9 @@ describe('DetailsPage', () => {
     http.expectOne('/api/titles/79').flush(detail({ trailerUrl: null, watchProviders: empty }));
     await fixture.whenStable();
     expect(el.textContent).not.toContain('Assistir trailer');
-    expect(el.querySelector('#onde-assistir')?.textContent).toContain('não está em nenhum serviço no Brasil');
+    expect(el.querySelector('#onde-assistir')?.textContent).toContain(
+      'não está em nenhum serviço no Brasil',
+    );
   });
 
   it('mostra "não encontrado" para 404 e para id inválido', async () => {

@@ -12,11 +12,11 @@ commit messages are Brazilian Portuguese. Follow that.
 
 ## Commands
 
-Setup: `cp .env.example .env` (needs `TMDB_API_TOKEN`; `ADMIN_TOKEN` optional). The backend reads `../.env`
+Setup: `cp .env.example .env` (needs `TMDB_API_TOKEN`; `ADMIN_TOKEN` optional; `MAIL_*` default to Mailpit). The backend reads `../.env`
 directly via `spring.config.import`, so it works from `backend/` without exporting variables.
 
 ```bash
-docker compose up -d --wait        # Postgres on :5434   (docker compose down -v to reset)
+docker compose up -d --wait        # Postgres on :5434 + Mailpit (SMTP :1025, inbox :8025)   (down -v to reset)
 
 # backend (port 8081) — uses the Maven wrapper
 cd backend
@@ -38,7 +38,8 @@ Swagger: `http://localhost:8081/swagger-ui.html`. Component showcase (dev only):
 ## Backend architecture (`br.com.jotave.wannawatch`)
 
 - **Packages by feature**: `catalog` (`api` / `application` / `domain`), `tmdb` (`client` + `importer`), `auth`,
-  `social` (likes), `match`, `profile`, `shared` (web errors, cursors, CORS, clock).
+  `signup` (register, onboarding titles, e-mail code), `social` (likes), `match`, `profile`, `shared` (web errors,
+  cursors, CORS, clock).
 - **Data access**: schema is owned by Flyway (`src/main/resources/db/migration`, `V<n>__descricao.sql`), with
   `ddl-auto: validate`. JPA entities exist in `catalog/domain`, but most reads and all social/match/auth logic use
   `JdbcClient` with hand-written SQL (services under `catalog/application`, `LikeService`, `MatchService`, etc.).
@@ -52,6 +53,10 @@ Swagger: `http://localhost:8081/swagger-ui.html`. Component showcase (dev only):
   `HandlerMethodArgumentResolver` — an endpoint is protected simply by declaring an `AuthUser` parameter (throws
   401 otherwise). Passwords are checked with `pgcrypto` in SQL. Seed users (`jotave`, `bia`, `caio`, password
   `wannawatch`) come from migration V4; everyone is friends with everyone.
+- **Signup** (`signup`): 3 steps — account (logged in right away) → ≥5 titles + optional favorite (become likes,
+  source `ONBOARDING`) → 6-digit e-mail code. Progress is `AccountStatus` (`app_user.titles_picked_at` /
+  `email_verified_at`), returned as `account` by login/register and `GET /api/auth/account`. The code e-mail goes
+  out after commit via `VerificationMailer` (SMTP; mocked with `@MockitoBean` in `SignupApiIntegrationTest`).
 - **Errors**: throw `NotFoundException` / `BadRequestException` / `ConflictException` / `ForbiddenException` /
   `UnauthorizedException`; `ApiExceptionHandler` turns them into ProblemDetail.
 - **Pagination**: page-based lists use `PageResponse`; feeds (Swipe, Reels, Match deck) use `Cursor` +
@@ -69,8 +74,11 @@ Swagger: `http://localhost:8081/swagger-ui.html`. Component showcase (dev only):
   CSS design tokens in `src/styles/tokens.css`. Mind the `anyComponentStyle` budget (6kB warn / 8kB error).
 - `core/api`: `models.ts` mirrors backend DTOs; `CatalogApi` / `social-api.ts` are the only places that call HTTP.
   API base URL is in `src/environments/`.
-- `core/auth`: `AuthStore` (token in localStorage), interceptor adds the bearer token and handles 401, guards
-  `requireLogin` / `guestOnly`. Every route except `/entrar` requires login.
+- `core/auth`: `AuthStore` (token + `account` status in localStorage, `signupStep` / `ready`), interceptor adds
+  the bearer token and handles 401, guards `requireLogin` / `requireSignupDone` / `guestOnly` / `signupPending`.
+  Routes are split in `app.routes.ts`: `open` (catalog: Home, details, search, Séries, Filmes, Sobre — guests see
+  an "Entrar" link) and `members` (Swipe, Reels, Match, profile… — need login). A logged-in user with an
+  unfinished signup is sent to `/cadastro` from any route. Guest-facing UI must not call per-user endpoints.
 - `core/social/LikesStore`: per-title likes (mine + friends'), batch-fetched, optimistic updates.
 - **Layout is driven by route `data`** (`layout/route-meta.ts`): `shell` = `feed` (TikTok-style side nav on
   desktop ≥1024px), `cinema` (page renders its own top pill menu), or `bare` (no nav); `theme` = `light` / `dark`,

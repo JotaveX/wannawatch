@@ -5,7 +5,9 @@ import java.util.Locale;
 
 /** De que tela veio a interação. Opcional: sem ele o evento fica com {@code source} nulo. */
 public enum InteractionSource {
-    SWIPE, REELS, DETAILS, HOME, MATCH;
+    SWIPE, REELS, DETAILS, HOME, MATCH,
+    /** títulos escolhidos no cadastro */
+    ONBOARDING;
 
     /** Nulo ou vazio = sem origem; valor desconhecido = 400. */
     public static InteractionSource parse(String value) {

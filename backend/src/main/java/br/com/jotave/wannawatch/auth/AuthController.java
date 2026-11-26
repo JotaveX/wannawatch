@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
-/** Não há cadastro: as contas vêm da migration V4. */
+/** Login, sessão e status do cadastro. O cadastro em si fica em {@code signup}. */
 @RestController
 @RequestMapping("/api/auth")
 @Tag(name = "Login")
@@ -27,15 +27,19 @@ public class AuthController {
         this.auth = auth;
     }
 
-    public record LoginRequest(@NotBlank @Size(max = 40) String username, @NotBlank @Size(max = 200) String password) {}
+    /** @param username usuário ou e-mail */
+    public record LoginRequest(@NotBlank @Size(max = 254) String username, @NotBlank @Size(max = 200) String password) {}
 
-    public record LoginResponse(String token, UserRef user) {}
+    /** @param account em que etapa do cadastro a conta está (o front leva para a que falta) */
+    public record LoginResponse(String token, UserRef user, AccountStatus account) {}
+
+    public record AccountResponse(UserRef user, AccountStatus account) {}
 
     @PostMapping("/login")
-    @Operation(summary = "Entra com usuário e senha e devolve o token (Authorization: Bearer)")
+    @Operation(summary = "Entra com usuário (ou e-mail) e senha e devolve o token (Authorization: Bearer)")
     public LoginResponse login(@Valid @RequestBody LoginRequest body) {
         return auth.login(body.username(), body.password())
-                .map(l -> new LoginResponse(l.token(), l.user().ref()))
+                .map(l -> new LoginResponse(l.token(), l.user().ref(), auth.status(l.user().id())))
                 .orElseThrow(() -> new UnauthorizedException("Usuário ou senha incorretos."));
     }
 
@@ -50,5 +54,11 @@ public class AuthController {
     @Operation(summary = "Quem está logado")
     public UserRef me(@Parameter(hidden = true) AuthUser user) {
         return user.ref();
+    }
+
+    @GetMapping("/account")
+    @Operation(summary = "Quem está logado e em que etapa do cadastro está")
+    public AccountResponse account(@Parameter(hidden = true) AuthUser user) {
+        return new AccountResponse(user.ref(), auth.status(user.id()));
     }
 }

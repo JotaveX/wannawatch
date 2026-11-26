@@ -26,7 +26,7 @@ describe('App (shell)', () => {
     const el = await render('/match/ABC123');
     expect(TestBed.inject(Router).url).toBe('/entrar?volta=%2Fmatch%2FABC123');
     expect(el.querySelector('ww-tab-bar')).toBeNull();
-    expect(el.querySelector('h1')?.textContent).toBe('Entrar');
+    expect(el.querySelector('h1')?.textContent).toBe('Que bom te ver de novo!');
   });
 
   it('logado, /entrar volta para a Home', async () => {

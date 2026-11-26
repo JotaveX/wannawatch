@@ -13,9 +13,16 @@ describe('LikesStore', () => {
   let store: LikesStore;
 
   beforeEach(() => {
-    localStorage.setItem('ww.session', JSON.stringify({ token: 't', user: { id: 1, username: 'jotave', displayName: 'Jotave' } }));
+    localStorage.setItem(
+      'ww.session',
+      JSON.stringify({ token: 't', user: { id: 1, username: 'jotave', displayName: 'Jotave' } }),
+    );
     TestBed.configureTestingModule({
-      providers: [provideHttpClient(), provideHttpClientTesting(), { provide: API_BASE_URL, useValue: '/api' }],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: API_BASE_URL, useValue: '/api' },
+      ],
     });
     http = TestBed.inject(HttpTestingController);
     store = TestBed.inject(LikesStore);
@@ -56,7 +63,11 @@ describe('LikesStore', () => {
     localStorage.clear();
     TestBed.resetTestingModule();
     TestBed.configureTestingModule({
-      providers: [provideHttpClient(), provideHttpClientTesting(), { provide: API_BASE_URL, useValue: '/api' }],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: API_BASE_URL, useValue: '/api' },
+      ],
     });
     TestBed.inject(LikesStore).ensure([1]);
     await tick();

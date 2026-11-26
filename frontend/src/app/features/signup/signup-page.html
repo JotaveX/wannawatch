@@ -1,0 +1,48 @@
+<ww-auth-frame [art]="art()" [wide]="step() === 'titles'">
+  <div class="page">
+    <header class="top">
+      <a routerLink="/" class="brand" aria-label="wannawatch? — início"
+        ><ww-logo [size]="28" [mark]="true"
+      /></a>
+      @if (auth.loggedIn()) {
+        <button type="button" class="quiet" (click)="logout()">Sair</button>
+      } @else {
+        <a class="quiet" routerLink="/entrar" [queryParams]="volta() ? { volta: volta() } : {}"
+          >Já tenho conta</a
+        >
+      }
+    </header>
+
+    <nav aria-label="Etapas do cadastro">
+      <ol class="steps">
+        @for (s of steps; track s.key; let i = $index) {
+          <li
+            [class.done]="i < index()"
+            [class.current]="i === index()"
+            [attr.aria-current]="i === index() ? 'step' : null"
+          >
+            <span class="dot" aria-hidden="true">{{ i < index() ? '✓' : i + 1 }}</span>
+            <span class="label">
+              {{ s.label }}
+              @if (i < index()) {
+                <span class="sr-only">(feita)</span>
+              }
+            </span>
+          </li>
+        }
+      </ol>
+    </nav>
+
+    @switch (step()) {
+      @case ('account') {
+        <ww-signup-account-step />
+      }
+      @case ('titles') {
+        <ww-signup-titles-step />
+      }
+      @case ('email') {
+        <ww-signup-email-step [dev]="dev" />
+      }
+    }
+  </div>
+</ww-auth-frame>

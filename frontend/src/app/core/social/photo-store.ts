@@ -31,7 +31,8 @@ export class PhotoStore {
 
   /** Confere o arquivo e devolve a foto recortada no centro, quadrada, como data URL. */
   async prepare(file: File): Promise<string> {
-    if (!file.type.startsWith('image/')) throw new PhotoError('Escolha um arquivo de imagem (JPG, PNG ou WebP).');
+    if (!file.type.startsWith('image/'))
+      throw new PhotoError('Escolha um arquivo de imagem (JPG, PNG ou WebP).');
     if (file.size > MAX_BYTES) throw new PhotoError('A imagem pode ter até 5 MB.');
     let bitmap: ImageBitmap;
     try {
@@ -44,7 +45,17 @@ export class PhotoStore {
     canvas.width = canvas.height = SIZE;
     canvas
       .getContext('2d')!
-      .drawImage(bitmap, (bitmap.width - side) / 2, (bitmap.height - side) / 2, side, side, 0, 0, SIZE, SIZE);
+      .drawImage(
+        bitmap,
+        (bitmap.width - side) / 2,
+        (bitmap.height - side) / 2,
+        side,
+        side,
+        0,
+        0,
+        SIZE,
+        SIZE,
+      );
     bitmap.close();
     return canvas.toDataURL('image/jpeg', 0.85);
   }

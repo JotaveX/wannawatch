@@ -47,15 +47,21 @@ export class CatalogApi {
   swipeDeck(
     query: TitleFilters & { seed: string; cursor?: string | null; size?: number },
   ): Observable<CursorPage<TitleCard>> {
-    return this.http.get<CursorPage<TitleCard>>(`${this.base}/swipe/deck`, { params: params(query) });
+    return this.http.get<CursorPage<TitleCard>>(`${this.base}/swipe/deck`, {
+      params: params(query),
+    });
   }
 
-  reels(query: TitleFilters & { cursor?: string | null; size?: number } = {}): Observable<CursorPage<TitleCard>> {
+  reels(
+    query: TitleFilters & { cursor?: string | null; size?: number } = {},
+  ): Observable<CursorPage<TitleCard>> {
     return this.http.get<CursorPage<TitleCard>>(`${this.base}/reels`, { params: params(query) });
   }
 
   search(q: string, page = 0, size = 20): Observable<Page<SearchHit>> {
-    return this.http.get<Page<SearchHit>>(`${this.base}/search`, { params: params({ q, page, size }) });
+    return this.http.get<Page<SearchHit>>(`${this.base}/search`, {
+      params: params({ q, page, size }),
+    });
   }
 }
 

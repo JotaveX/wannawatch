@@ -1,6 +1,6 @@
 import { isDevMode } from '@angular/core';
 import { Routes } from '@angular/router';
-import { guestOnly, requireLogin } from './core/auth/auth-guard';
+import { guestOnly, requireLogin, requireSignupDone, signupPending } from './core/auth/auth-guard';
 import { RouteMeta } from './layout/route-meta';
 import { profileResolver } from './features/profile/profile-resolver';
 
@@ -10,15 +10,65 @@ const placeholder = () =>
 const feed = (theme: RouteMeta['theme'] = 'light'): RouteMeta => ({ shell: 'feed', theme });
 const cinema: RouteMeta = { shell: 'cinema', theme: 'dark' };
 
-/** Telas que exigem login (todas, menos /entrar). */
-const app: Routes = [
-  // --- Telas principais ---
+/** Abertas para quem não tem conta: o catálogo (Início, detalhes, busca) e o Sobre. */
+const open: Routes = [
   {
     path: '',
     title: 'wannawatch?',
     loadComponent: () => import('./features/home/home-page').then((m) => m.HomePage),
     data: cinema,
   },
+  {
+    path: 'filme/:id',
+    title: 'Filme · wannawatch?',
+    loadComponent: () => import('./features/details/details-page').then((m) => m.DetailsPage),
+    data: { ...cinema, mediaType: 'MOVIE' },
+  },
+  {
+    path: 'serie/:id',
+    title: 'Série · wannawatch?',
+    loadComponent: () => import('./features/details/details-page').then((m) => m.DetailsPage),
+    data: { ...cinema, mediaType: 'SERIES' },
+  },
+  {
+    path: 'busca',
+    title: 'Busca · wannawatch?',
+    loadComponent: () => import('./features/search/search-page').then((m) => m.SearchPage),
+    data: cinema,
+  },
+  {
+    path: 'series',
+    title: 'Séries · wannawatch?',
+    loadComponent: () => import('./features/search/search-page').then((m) => m.SearchPage),
+    // a busca é sempre escura: com o tema claro o fundo atrás dela piscava branco na troca
+    data: {
+      ...feed('dark'),
+      heading: 'Séries',
+      message: 'Uma vitrine só de séries vem depois.',
+      icon: 'tv',
+    },
+  },
+  {
+    path: 'filmes',
+    title: 'Filmes · wannawatch?',
+    loadComponent: placeholder,
+    data: {
+      ...feed(),
+      heading: 'Filmes',
+      message: 'Uma vitrine só de filmes vem depois.',
+      icon: 'film',
+    },
+  },
+  {
+    path: 'sobre',
+    title: 'Sobre e créditos · wannawatch?',
+    loadComponent: () => import('./features/about/about-page').then((m) => m.AboutPage),
+    data: feed(),
+  },
+];
+
+/** Precisam de conta: sem login, vão para /entrar e voltam depois. */
+const members: Routes = [
   {
     path: 'swipe',
     title: 'Swipe · wannawatch?',
@@ -44,43 +94,15 @@ const app: Routes = [
     data: feed(),
   },
   {
-    path: 'filme/:id',
-    title: 'Filme · wannawatch?',
-    loadComponent: () => import('./features/details/details-page').then((m) => m.DetailsPage),
-    data: { ...cinema, mediaType: 'MOVIE' },
-  },
-  {
-    path: 'serie/:id',
-    title: 'Série · wannawatch?',
-    loadComponent: () => import('./features/details/details-page').then((m) => m.DetailsPage),
-    data: { ...cinema, mediaType: 'SERIES' },
-  },
-  {
-    path: 'busca',
-    title: 'Busca · wannawatch?',
-    loadComponent: () => import('./features/search/search-page').then((m) => m.SearchPage),
-    data: cinema,
-  },
-
-  // --- Fora do escopo desta etapa ---
-  {
-    path: 'series',
-    title: 'Séries · wannawatch?',
-    loadComponent: () => import('./features/search/search-page').then((m) => m.SearchPage),
-    // a busca é sempre escura: com o tema claro o fundo atrás dela piscava branco na troca
-    data: { ...feed('dark'), heading: 'Séries', message: 'Uma vitrine só de séries vem depois.', icon: 'tv' },
-  },
-  {
-    path: 'filmes',
-    title: 'Filmes · wannawatch?',
-    loadComponent: placeholder,
-    data: { ...feed(), heading: 'Filmes', message: 'Uma vitrine só de filmes vem depois.', icon: 'film' },
-  },
-  {
     path: 'minha-lista',
     title: 'Minha lista · wannawatch?',
     loadComponent: placeholder,
-    data: { ...feed(), heading: 'Minha lista', message: 'O que você salvar aparece aqui. Em breve.', icon: 'list' },
+    data: {
+      ...feed(),
+      heading: 'Minha lista',
+      message: 'O que você salvar aparece aqui. Em breve.',
+      icon: 'list',
+    },
   },
   {
     path: 'perfil',
@@ -96,13 +118,6 @@ const app: Routes = [
     resolve: { savedProfile: profileResolver },
     data: feed(),
   },
-  {
-    path: 'sobre',
-    title: 'Sobre e créditos · wannawatch?',
-    loadComponent: () => import('./features/about/about-page').then((m) => m.AboutPage),
-    data: feed(),
-  },
-
   ...(isDevMode()
     ? [
         {
@@ -123,11 +138,28 @@ export const routes: Routes = [
     canActivate: [guestOnly],
     data: { shell: 'bare', theme: 'light' } satisfies RouteMeta,
   },
-  { path: '', canActivateChild: [requireLogin], children: app },
+  {
+    path: 'cadastro',
+    title: 'Criar conta · wannawatch?',
+    loadComponent: () => import('./features/signup/signup-page').then((m) => m.SignupPage),
+    canActivate: [signupPending],
+    data: { shell: 'bare', theme: 'light' } satisfies RouteMeta,
+  },
+  {
+    path: '',
+    // quem entrou mas não terminou o cadastro volta para /cadastro em qualquer tela
+    canActivateChild: [requireSignupDone],
+    children: [...open, { path: '', canActivateChild: [requireLogin], children: members }],
+  },
   {
     path: '**',
     title: 'Não encontrado · wannawatch?',
     loadComponent: placeholder,
-    data: { ...feed(), heading: 'Ops, essa página não existe', message: 'Talvez o link tenha mudado.', mascot: true },
+    data: {
+      ...feed(),
+      heading: 'Ops, essa página não existe',
+      message: 'Talvez o link tenha mudado.',
+      mascot: true,
+    },
   },
 ];

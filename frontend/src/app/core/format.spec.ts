@@ -20,9 +20,16 @@ describe('format', () => {
   it('monta a linha de informações sem partes vazias', () => {
     const base = { genres: [], poster: null, backdrop: null } as unknown as TitleCard;
     expect(
-      metaLine({ ...base, mediaType: 'MOVIE', runtimeMinutes: 130, genres: [{ id: 1, name: 'Drama', slug: 'drama' }] }),
+      metaLine({
+        ...base,
+        mediaType: 'MOVIE',
+        runtimeMinutes: 130,
+        genres: [{ id: 1, name: 'Drama', slug: 'drama' }],
+      }),
     ).toBe('Filme · Drama · 2h10');
-    expect(metaLine({ ...base, mediaType: 'SERIES', seasonsCount: 2 })).toBe('Série · 2 temporadas');
+    expect(metaLine({ ...base, mediaType: 'SERIES', seasonsCount: 2 })).toBe(
+      'Série · 2 temporadas',
+    );
   });
 });
 

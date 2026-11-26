@@ -39,12 +39,16 @@ O `.env` fica fora do git. Ele é lido pelo docker-compose e pelo back-end. Pree
   <https://www.themoviedb.org/settings/api> (uso não comercial é gratuito).
 - `ADMIN_TOKEN`: qualquer valor secreto; protege o endpoint que dispara a importação.
   Gere um com `openssl rand -hex 16`. Vazio = endpoint desligado.
+- `MAIL_*`: SMTP do código de confirmação do cadastro. O padrão é o Mailpit do docker-compose
+  (nada sai de verdade; a caixa de entrada fica em <http://localhost:8025>). Para mandar de
+  verdade, aponte para um SMTP real e preencha usuário, senha, `MAIL_SMTP_AUTH` e `MAIL_STARTTLS`.
 
 Portas padrão (mude no `.env` se precisar):
 
 | Serviço  | Porta |
 |----------|-------|
 | Postgres | 5434  |
+| Mailpit (SMTP / caixa de entrada) | 1025 / 8025 |
 | Back-end | 8081  |
 | Front-end| 4200  |
 
@@ -54,7 +58,7 @@ Portas padrão (mude no `.env` se precisar):
 docker compose up -d --wait
 ```
 
-Para zerar o banco: `docker compose down -v`.
+Sobe o Postgres e o Mailpit (o SMTP de mentira do cadastro). Para zerar o banco: `docker compose down -v`.
 
 ## 3. Back-end
 
@@ -85,7 +89,11 @@ Documentação interativa (Swagger): <http://localhost:8081/swagger-ui.html>
 | `GET /api/swipe/deck?seed=&cursor=&size=` | Deck do Swipe: com login, personalizado (varia com a `seed`); sem, aleatório fixo por `seed` |
 | `GET /api/reels?cursor=&size=` | Feed do Reels: com login, personalizado; sem, por popularidade |
 | `GET /api/search?q=&page=&size=` | Busca fuzzy por título, pessoa e gênero |
-| `POST /api/auth/login` · `POST /api/auth/logout` · `GET /api/auth/me` | Login (devolve o token) |
+| `POST /api/auth/login` · `POST /api/auth/logout` · `GET /api/auth/me` | Login por usuário ou e-mail (devolve o token e a etapa do cadastro em `account`) |
+| `GET /api/auth/account` | Quem está logado e em que etapa do cadastro está (`{ user, account }`) |
+| `POST /api/auth/register` | Cadastro, etapa 1: cria a conta já logada e manda o código por e-mail (201) |
+| `PUT /api/me/onboarding/titles` | Cadastro, etapa 2: `{ titleIds, favoriteTitleId? }`, de 5 a 50 títulos (viram "quero ver") |
+| `POST /api/auth/email/verify` · `POST /api/auth/email/resend` | Cadastro, etapa 3: confirma o código (`{ code }`) · manda outro (um por minuto) |
 | `PUT`/`DELETE /api/likes/{titleId}?source=` | "Quero ver" |
 | `PUT`/`DELETE /api/titles/{id}/signals/{kind}?source=` | Passa, talvez, já vi ou salvar (`kind`: `PASS`, `MAYBE`, `SEEN`, `SAVED`) |
 | `GET /api/me/signals?ids=1,2,3` | Para cada título: quais sinais eu marquei |
@@ -99,7 +107,8 @@ Documentação interativa (Swagger): <http://localhost:8081/swagger-ui.html>
 | `DELETE …/participants/me` | Sair da sala |
 
 - `type` é `MOVIE` ou `SERIES`; `genre` é o slug (ex.: `ficcao-cientifica`).
-- `source` (opcional) diz de que tela veio a interação: `SWIPE`, `REELS`, `DETAILS`, `HOME` ou `MATCH`.
+- `source` (opcional) diz de que tela veio a interação: `SWIPE`, `REELS`, `DETAILS`, `HOME` ou `MATCH`
+  (e `ONBOARDING`, gravado pelo próprio back para os títulos escolhidos no cadastro).
 - Listas com cursor devolvem `{ items, nextCursor }`; `nextCursor` nulo = acabou.
 - Todo card de título (`TitleCard`) tem `reason`: `{ kind, text }` com o motivo da recomendação
   (ex.: `"Porque você curtiu Dark"`) nas listas personalizadas, e `null` nas outras.
@@ -192,6 +201,7 @@ lateral. Os dados de "onde assistir" vêm da JustWatch, creditada em `/sobre` e 
 | `/reels` | Reels | escuro |
 | `/match`, `/match/:code` | Match: salas abertas e criar sala · sala de espera e votação | claro |
 | `/entrar` | Login (sem navegação) | claro |
+| `/cadastro` | Criar conta em 3 etapas: conta, títulos de que gosta, confirmar o e-mail (sem navegação) | claro |
 | `/perfil` | Seu perfil: números, curtidas por semana e últimos curtidos | claro |
 | `/ajustes` | Nome, cor, Bu, favoritos, conta e sair | claro |
 | `/sobre` | Sobre e créditos | claro |
@@ -208,9 +218,29 @@ Atalhos de teclado:
 - **Reels**: `↓`/`J` próximo, `↑`/`K` anterior, `L` quero ver, `S` salvar.
 - **Match**: `→` quero ver, `←` passa, `Z` volta o último.
 
-## Login, amigos e Match
+## Cadastro, login, amigos e Match
 
-Não há cadastro: a migration `V4` cria três contas, todas com a senha `wannawatch`:
+O cadastro (`/cadastro`) tem três etapas, nesta ordem:
+
+1. **Conta**: nome, usuário (3 a 20 caracteres: minúsculas, números, `_` ou ponto), e-mail e senha
+   (8+ caracteres). A conta já sai logada e um código de 6 dígitos vai para o e-mail.
+2. **Do que você gosta**: pelo menos 5 títulos (até 50), que viram "quero ver" e já personalizam a
+   recomendação; entre eles, opcionalmente, o **favorito de todos os tempos** (a estrela).
+3. **Confirmar o e-mail**: o código vale 30 minutos e aceita 5 tentativas erradas; dá para pedir
+   outro a cada minuto (o novo substitui o anterior). No banco fica só o SHA-256 do código.
+
+A etapa em que a conta está vem do back (`account` no login e em `GET /api/auth/account`): quem
+entra com o cadastro pela metade volta para a etapa que falta, em qualquer tela. O login aceita
+usuário ou e-mail.
+
+Sem conta dá para **ver o catálogo**: Início, detalhes, busca, Séries, Filmes e Sobre. No lugar do
+avatar aparece "Entrar". Swipe, Reels, Match, Minha lista, perfil e ajustes pedem login (levam a
+`/entrar` e voltam depois); "Já vi" na página de detalhes também. As regras de quem vê o quê ficam
+no front: a API do Swipe e do Reels continua respondendo sem token (é só o catálogo, sem
+personalização).
+
+A migration `V4` cria três contas de teste, todas com a senha `wannawatch` (a `V10` marca as três
+com o cadastro completo):
 
 | Usuário | Nome |
 |---|---|
@@ -218,7 +248,6 @@ Não há cadastro: a migration `V4` cria três contas, todas com a senha `wannaw
 | `bia` | Bia |
 | `caio` | Caio |
 
-- O app inteiro exige login; sem sessão, qualquer tela leva a `/entrar` (e volta para onde ia).
 - Token opaco de 256 bits, válido por 30 dias; no banco fica só o SHA-256 dele. A senha é bcrypt
   (`pgcrypto`), conferida pelo próprio Postgres.
 - Ainda não existe lista de amigos: **todo usuário é amigo de todo mundo**. "Fulano curtiu" (Home,

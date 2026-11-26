@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { AuthStore } from '../core/auth/auth-store';
 import { Avatar } from '../shared/ui/avatar';
+import { Button } from '../shared/ui/button';
 import { Icon } from '../shared/ui/icon';
 import { Logo } from '../shared/ui/logo';
 import { ActiveSlider } from './active-slider';
@@ -10,7 +11,7 @@ import { SIDE_ITEMS } from './nav-items';
 /** Barra lateral do desktop, no Swipe, no Reels e nas telas secundárias (estilo TikTok web). */
 @Component({
   selector: 'ww-side-nav',
-  imports: [RouterLink, RouterLinkActive, Avatar, Icon, Logo],
+  imports: [RouterLink, RouterLinkActive, Avatar, Button, Icon, Logo],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
     role: 'complementary',
@@ -18,7 +19,9 @@ import { SIDE_ITEMS } from './nav-items';
     '(window:resize)': 'slider.measure()',
   },
   template: `
-    <a routerLink="/" class="brand" aria-label="wannawatch? — início"><ww-logo [size]="26" [mark]="true" /></a>
+    <a routerLink="/" class="brand" aria-label="wannawatch? — início"
+      ><ww-logo [size]="26" [mark]="true"
+    /></a>
 
     <nav aria-label="Navegação principal">
       <!-- aba do item ativo: mesma cor do painel, encaixada nele; desliza entre os itens -->
@@ -52,8 +55,13 @@ import { SIDE_ITEMS } from './nav-items';
 
     @if (auth.user(); as user) {
       <section class="account" aria-label="Sua conta">
-        <a class="me" routerLink="/perfil" routerLinkActive="active" ariaCurrentWhenActive="page"
-           [attr.aria-label]="'Seu perfil: ' + user.displayName">
+        <a
+          class="me"
+          routerLink="/perfil"
+          routerLinkActive="active"
+          ariaCurrentWhenActive="page"
+          [attr.aria-label]="'Seu perfil: ' + user.displayName"
+        >
           <ww-avatar [user]="user" [size]="32" />
           <span class="me-name">{{ user.displayName }}</span>
         </a>
@@ -61,6 +69,12 @@ import { SIDE_ITEMS } from './nav-items';
           <ww-icon name="logout" [size]="20" />
           Sair
         </button>
+      </section>
+    } @else {
+      <section class="account guest" aria-label="Sua conta">
+        <p>Entre para usar o Swipe, os Reels e o Match.</p>
+        <a wwButton variant="primary" routerLink="/entrar">Entrar</a>
+        <a wwButton variant="soft" routerLink="/cadastro">Criar conta</a>
       </section>
     }
   `,
@@ -155,11 +169,19 @@ import { SIDE_ITEMS } from './nav-items';
     }
     .tab::before {
       top: calc(-1 * var(--tab-r));
-      background: radial-gradient(circle at 0 0, transparent var(--tab-r), var(--panel) calc(var(--tab-r) + 0.5px));
+      background: radial-gradient(
+        circle at 0 0,
+        transparent var(--tab-r),
+        var(--panel) calc(var(--tab-r) + 0.5px)
+      );
     }
     .tab::after {
       bottom: calc(-1 * var(--tab-r));
-      background: radial-gradient(circle at 0 100%, transparent var(--tab-r), var(--panel) calc(var(--tab-r) + 0.5px));
+      background: radial-gradient(
+        circle at 0 100%,
+        transparent var(--tab-r),
+        var(--panel) calc(var(--tab-r) + 0.5px)
+      );
     }
     /* conta, no pé da barra: o perfil (cartão) e o Sair logo abaixo */
     .account {
@@ -167,6 +189,15 @@ import { SIDE_ITEMS } from './nav-items';
       flex-direction: column;
       gap: var(--ww-space-1);
       margin-right: var(--ww-space-4);
+    }
+    .guest {
+      gap: var(--ww-space-2);
+    }
+    .guest p {
+      margin-bottom: var(--ww-space-1);
+      padding: 0 var(--ww-space-3);
+      color: var(--text-2);
+      font-size: 13px;
     }
     .me,
     .logout {

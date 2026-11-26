@@ -5,6 +5,8 @@ import { Title } from '@angular/platform-browser';
 import { Router, RouterLink } from '@angular/router';
 import { catchError, map, of, startWith, switchMap } from 'rxjs';
 import { CatalogApi } from '../../core/api/catalog-api';
+import { loginUrl } from '../../core/auth/auth-guard';
+import { AuthStore } from '../../core/auth/auth-store';
 import { MediaType, TitleDetail } from '../../core/api/models';
 import { length, metaLine, typeLabel } from '../../core/format';
 import { titleLink } from '../../core/title-link';
@@ -44,6 +46,7 @@ export class DetailsPage {
   private readonly pageTitle = inject(Title);
   private readonly likes = inject(LikesStore);
   private readonly signals = inject(SignalsStore);
+  private readonly auth = inject(AuthStore);
   protected readonly retry = signal(0);
 
   protected readonly state = signal<State>({ status: 'loading' });
@@ -56,13 +59,20 @@ export class DetailsPage {
   protected readonly meta = computed(() => {
     const d = this.detail();
     if (!d) return [];
-    return [d.genres.map((g) => g.name).slice(0, 3).join(', '), d.year ? String(d.year) : null, length(d)].filter(
-      (p): p is string => !!p,
-    );
+    return [
+      d.genres
+        .map((g) => g.name)
+        .slice(0, 3)
+        .join(', '),
+      d.year ? String(d.year) : null,
+      length(d),
+    ].filter((p): p is string => !!p);
   });
   protected readonly info = computed(() => (this.detail() ? infoItems(this.detail()!) : []));
   protected readonly crew = computed(() => (this.detail() ? crewGroups(this.detail()!.crew) : []));
-  protected readonly providers = computed(() => (this.detail() ? providerGroups(this.detail()!.watchProviders) : []));
+  protected readonly providers = computed(() =>
+    this.detail() ? providerGroups(this.detail()!.watchProviders) : [],
+  );
   protected readonly similar = computed<RowItem[]>(() =>
     (this.detail()?.similar ?? []).map((card) => ({ card, sub: metaLine(card) })),
   );
@@ -79,9 +89,15 @@ export class DetailsPage {
     return d ? this.signals.has(d.id, 'SEEN') : false;
   });
 
+  /** Sem login, "Já vi" leva para o login e volta para esta página. */
   protected toggleSeen(): void {
     const d = this.detail();
-    if (d) this.signals.toggle(d.id, 'SEEN', 'DETAILS');
+    if (!d) return;
+    if (!this.auth.loggedIn()) {
+      this.router.navigateByUrl(loginUrl(this.router, this.router.url));
+      return;
+    }
+    this.signals.toggle(d.id, 'SEEN', 'DETAILS');
   }
 
   constructor() {
@@ -93,7 +109,9 @@ export class DetailsPage {
             ? of<State>({ status: 'notfound' })
             : this.api.title(id).pipe(
                 map((detail): State => ({ status: 'ok', detail })),
-                catchError((e: HttpErrorResponse) => of<State>({ status: e.status === 404 ? 'notfound' : 'error' })),
+                catchError((e: HttpErrorResponse) =>
+                  of<State>({ status: e.status === 404 ? 'notfound' : 'error' }),
+                ),
                 startWith<State>({ status: 'loading' }),
               ),
         ),

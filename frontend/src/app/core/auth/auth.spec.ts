@@ -42,7 +42,9 @@ describe('AuthStore + authInterceptor', () => {
     client.get('/api/auth/me').subscribe();
     expect(http.expectOne('/api/auth/me').request.headers.get('Authorization')).toBe('Bearer tok');
     client.get('https://image.tmdb.org/x.jpg').subscribe();
-    expect(http.expectOne('https://image.tmdb.org/x.jpg').request.headers.has('Authorization')).toBe(false);
+    expect(
+      http.expectOne('https://image.tmdb.org/x.jpg').request.headers.has('Authorization'),
+    ).toBe(false);
   });
 
   it('lê a sessão salva ao abrir o app', () => {
@@ -62,7 +64,9 @@ describe('AuthStore + authInterceptor', () => {
     const navigate = vi.spyOn(router, 'navigate').mockResolvedValue(true);
     vi.spyOn(router, 'url', 'get').mockReturnValue('/match/ABC123');
 
-    TestBed.inject(HttpClient).get('/api/likes').subscribe({ error: () => undefined });
+    TestBed.inject(HttpClient)
+      .get('/api/likes')
+      .subscribe({ error: () => undefined });
     http.expectOne('/api/likes').flush(null, { status: 401, statusText: 'Unauthorized' });
 
     expect(auth.loggedIn()).toBe(false);
@@ -74,7 +78,9 @@ describe('AuthStore + authInterceptor', () => {
     localStorage.setItem('ww.session', JSON.stringify({ token: 'tok', user }));
     const auth = setup();
     auth.logout();
-    expect(http.expectOne('/api/auth/logout').request.headers.get('Authorization')).toBe('Bearer tok');
+    expect(http.expectOne('/api/auth/logout').request.headers.get('Authorization')).toBe(
+      'Bearer tok',
+    );
     expect(auth.user()).toBeNull();
   });
 });

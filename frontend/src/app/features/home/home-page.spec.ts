@@ -10,7 +10,10 @@ import { HomePage } from './home-page';
 describe('HomePage', () => {
   let http: HttpTestingController;
 
+  const session = { token: 't', user: { id: 1, username: 'jotave', displayName: 'Jotave' } };
+
   beforeEach(() => {
+    localStorage.setItem('ww.session', JSON.stringify(session));
     TestBed.configureTestingModule({
       providers: [
         provideRouter([]),
@@ -21,6 +24,7 @@ describe('HomePage', () => {
     });
     http = TestBed.inject(HttpTestingController);
   });
+  afterEach(() => localStorage.clear());
 
   async function render(response = homeResponse(), friends: FriendsLiked[] = []) {
     const fixture = TestBed.createComponent(HomePage);
@@ -32,6 +36,17 @@ describe('HomePage', () => {
     await fixture.whenStable();
     return el;
   }
+
+  it('sem login não pede "seus amigos" e mostra o Entrar no topo', async () => {
+    localStorage.clear();
+    const fixture = TestBed.createComponent(HomePage);
+    await fixture.whenStable();
+    http.expectOne('/api/home').flush(homeResponse());
+    http.expectNone((r) => r.url === '/api/likes/friends');
+    await fixture.whenStable();
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('a[href="/entrar"]')?.textContent?.trim()).toBe('Entrar');
+  });
 
   it('mostra o destaque com trailer no YouTube e link para os detalhes', async () => {
     const el = await render();
@@ -50,14 +65,22 @@ describe('HomePage', () => {
   it('explica o destaque por quem curtiu', async () => {
     const base = homeResponse();
     const el = await render(base, [
-      { title: card(1), likedByMe: false, friends: [{ id: 2, username: 'bia', displayName: 'Bia' }] },
+      {
+        title: card(1),
+        likedByMe: false,
+        friends: [{ id: 2, username: 'bia', displayName: 'Bia' }],
+      },
     ]);
     expect(el.querySelector('.reason')?.textContent).toBe('Bia curtiu');
   });
 
   it('desenha as fileiras com títulos e o Top 10 numerado', async () => {
     const el = await render(homeResponse(), [
-      { title: card(90), likedByMe: false, friends: [{ id: 2, username: 'bia', displayName: 'Bia' }] },
+      {
+        title: card(90),
+        likedByMe: false,
+        friends: [{ id: 2, username: 'bia', displayName: 'Bia' }],
+      },
     ]);
     const headings = Array.from(el.querySelectorAll('h2')).map((h) => h.textContent?.trim());
     expect(headings).toEqual([

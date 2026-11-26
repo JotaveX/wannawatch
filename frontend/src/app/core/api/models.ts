@@ -205,9 +205,34 @@ export interface ProfileUpdate {
   favoriteTitleId: number | null;
 }
 
+/** Em que etapa do cadastro a conta está (espelho de auth/AccountStatus). */
+export interface AccountStatus {
+  email: string | null;
+  emailVerified: boolean;
+  /** já escolheu os títulos de que gosta (pelo menos 5) */
+  titlesPicked: boolean;
+  /** as duas etapas feitas: pode usar o app inteiro */
+  complete: boolean;
+}
+
 export interface LoginResponse {
   token: string;
   user: UserRef;
+  account: AccountStatus;
+}
+
+/** GET /api/auth/account */
+export interface AccountResponse {
+  user: UserRef;
+  account: AccountStatus;
+}
+
+/** POST /api/auth/register */
+export interface RegisterRequest {
+  displayName: string;
+  username: string;
+  email: string;
+  password: string;
 }
 
 /** Para um título: se eu curti e quais amigos (todos os outros usuários) curtiram. */
@@ -215,7 +240,7 @@ export interface LoginResponse {
 export type SignalKind = 'PASS' | 'MAYBE' | 'SEEN' | 'SAVED';
 
 /** De que tela veio a interação (vai para o log de interações do back). */
-export type InteractionSource = 'SWIPE' | 'REELS' | 'DETAILS' | 'HOME' | 'MATCH';
+export type InteractionSource = 'SWIPE' | 'REELS' | 'DETAILS' | 'HOME' | 'MATCH' | 'ONBOARDING';
 
 export interface TitleSignals {
   titleId: number;

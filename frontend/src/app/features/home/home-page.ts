@@ -1,8 +1,16 @@
-import { ChangeDetectionStrategy, Component, computed, DestroyRef, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  DestroyRef,
+  inject,
+  signal,
+} from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CatalogApi } from '../../core/api/catalog-api';
 import { FriendsLiked, HomeResponse } from '../../core/api/models';
 import { SocialApi } from '../../core/api/social-api';
+import { AuthStore } from '../../core/auth/auth-store';
 import { LikesStore } from '../../core/social/likes-store';
 import { TopNav } from '../../layout/top-nav';
 import { Button } from '../../shared/ui/button';
@@ -40,7 +48,9 @@ type State = { status: 'loading' } | { status: 'error' } | { status: 'ok'; data:
               }
             </ww-title-row>
           } @empty {
-            <p class="message">O catálogo ainda está vazio. A importação da TMDB roda na primeira subida do back-end.</p>
+            <p class="message">
+              O catálogo ainda está vazio. A importação da TMDB roda na primeira subida do back-end.
+            </p>
           }
         </div>
       }
@@ -154,6 +164,7 @@ export class HomePage {
   private readonly api = inject(CatalogApi);
   private readonly social = inject(SocialApi);
   private readonly likes = inject(LikesStore);
+  private readonly auth = inject(AuthStore);
   private readonly destroyRef = inject(DestroyRef);
 
   protected readonly state = signal<State>({ status: 'loading' });
@@ -185,13 +196,17 @@ export class HomePage {
         },
         error: () => this.state.set({ status: 'error' }),
       });
+    // sem login não há "seus amigos"
+    if (!this.auth.loggedIn()) return;
     this.social
       .friendsLiked()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (items) => {
           this.friendsLiked.set(items);
-          this.likes.remember(items.map((i) => ({ titleId: i.title.id, likedByMe: i.likedByMe, friends: i.friends })));
+          this.likes.remember(
+            items.map((i) => ({ titleId: i.title.id, likedByMe: i.likedByMe, friends: i.friends })),
+          );
         },
         error: () => this.friendsLiked.set([]),
       });

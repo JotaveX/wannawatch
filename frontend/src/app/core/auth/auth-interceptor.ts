@@ -20,8 +20,13 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
 
   return next(authed).pipe(
     catchError((error: unknown) => {
-      const isLogin = req.url.endsWith('/auth/login');
-      if (error instanceof HttpErrorResponse && error.status === 401 && !isLogin && auth.loggedIn()) {
+      const isLogin = req.url.endsWith('/auth/login') || req.url.endsWith('/auth/register');
+      if (
+        error instanceof HttpErrorResponse &&
+        error.status === 401 &&
+        !isLogin &&
+        auth.loggedIn()
+      ) {
         auth.clear();
         const back = router.url;
         router.navigate(['/entrar'], { queryParams: back && back !== '/' ? { volta: back } : {} });

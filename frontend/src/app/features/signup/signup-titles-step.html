@@ -1,0 +1,138 @@
+<h1 #heading tabindex="-1">Do que você gosta?</h1>
+<p class="lead">
+  Escolha pelo menos {{ min }}. Eles entram como “quero ver” e já deixam as recomendações com a sua
+  cara.
+</p>
+
+@if (picked().length) {
+  <section class="chosen" aria-labelledby="escolhidos">
+    <h2 id="escolhidos">Seus escolhidos</h2>
+    <p class="help" id="estrela">
+      Toque na estrela para marcar seu favorito de todos os tempos (opcional).
+    </p>
+    <ul class="chips">
+      @for (t of picked(); track t.id) {
+        <li class="chip" [class.chip--fav]="favoriteId() === t.id">
+          <span class="chip-name">{{ t.title }}</span>
+          <button
+            type="button"
+            class="chip-btn star"
+            [attr.aria-pressed]="favoriteId() === t.id"
+            aria-describedby="estrela"
+            [attr.aria-label]="'Favorito de todos os tempos: ' + t.title"
+            (click)="toggleFavorite(t)"
+          >
+            <ww-icon name="star" [size]="18" [stroke]="2.2" />
+          </button>
+          <button
+            type="button"
+            class="chip-btn"
+            [attr.aria-label]="'Tirar ' + t.title"
+            (click)="toggle(t)"
+          >
+            <ww-icon name="x" [size]="16" [stroke]="2.2" />
+          </button>
+        </li>
+      }
+    </ul>
+  </section>
+}
+
+<div class="filters">
+  <label class="search">
+    <ww-icon name="search" [size]="18" />
+    <span class="sr-only">Buscar pelo nome</span>
+    <input
+      type="search"
+      name="titulo-busca"
+      placeholder="Busque pelo nome"
+      autocomplete="off"
+      aria-describedby="status-titulos"
+      [value]="query()"
+      (input)="query.set($any($event.target).value)"
+      (keydown.enter)="$event.preventDefault()"
+    />
+  </label>
+  <ww-segmented label="Mostrar" [options]="kinds" [(value)]="kind" />
+</div>
+
+<p id="status-titulos" class="status" aria-live="polite">
+  @if (loading() && !items().length) {
+    Carregando…
+  } @else if (failed()) {
+    Não deu pra carregar agora. Tenta de novo?
+  } @else if (searching()) {
+    {{
+      items().length
+        ? 'Resultados para “' + query().trim() + '”'
+        : 'Nada encontrado para “' + query().trim() + '”.'
+    }}
+  } @else {
+    Os mais populares agora
+  }
+</p>
+
+<ul class="grid" [class.grid--busy]="loading()">
+  @for (t of items(); track t.id) {
+    <li>
+      <button
+        type="button"
+        class="pick"
+        [class.pick--on]="isPicked(t.id)"
+        [attr.aria-pressed]="isPicked(t.id)"
+        [attr.aria-label]="t.title + year(t)"
+        (click)="toggle(t)"
+      >
+        <span class="poster">
+          <ww-poster [image]="t.poster" [seed]="t.id" [title]="t.title" sizes="160px" />
+          @if (isPicked(t.id)) {
+            <span class="badge" aria-hidden="true"
+              ><ww-icon name="check" [size]="16" [stroke]="2.8"
+            /></span>
+          }
+        </span>
+        <span class="pick-name" aria-hidden="true">{{ t.title }}</span>
+      </button>
+    </li>
+  }
+</ul>
+
+@if (hasMore()) {
+  <button
+    wwButton
+    variant="soft"
+    type="button"
+    class="more"
+    [disabled]="loading()"
+    (click)="loadMore()"
+  >
+    {{ loading() ? 'Carregando…' : 'Mostrar mais' }}
+  </button>
+}
+
+<div class="bar">
+  <div class="count">
+    <strong aria-live="polite">
+      {{ count() }} {{ count() === 1 ? 'escolhido' : 'escolhidos' }}
+      @if (missing() > 0) {
+        · faltam {{ missing() }}
+      }
+    </strong>
+    <span class="meter" aria-hidden="true"
+      ><span [style.transform]="'scaleX(' + progress() + ')'"></span
+    ></span>
+    @if (error(); as error) {
+      <span class="error" role="alert">{{ error }}</span>
+    }
+  </div>
+  <button
+    wwButton
+    variant="primary"
+    size="lg"
+    type="button"
+    [attr.aria-disabled]="missing() > 0 || busy()"
+    (click)="submit()"
+  >
+    {{ busy() ? 'Salvando…' : 'Continuar' }}
+  </button>
+</div>

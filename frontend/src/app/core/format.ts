@@ -20,7 +20,9 @@ export function typeLabel(card: Pick<TitleCard, 'mediaType'>): string {
 }
 
 /** Duração do filme ou número de temporadas da série. */
-export function length(card: Pick<TitleCard, 'mediaType' | 'runtimeMinutes' | 'seasonsCount'>): string | null {
+export function length(
+  card: Pick<TitleCard, 'mediaType' | 'runtimeMinutes' | 'seasonsCount'>,
+): string | null {
   return card.mediaType === 'MOVIE' ? duration(card.runtimeMinutes) : seasons(card.seasonsCount);
 }
 
@@ -68,5 +70,9 @@ export function longDate(iso: string | null | undefined): string | null {
   if (!iso) return null;
   const [y, m, d] = iso.split('-').map(Number);
   if (!y || !m || !d) return null;
-  return new Date(y, m - 1, d).toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' });
+  return new Date(y, m - 1, d).toLocaleDateString('pt-BR', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  });
 }

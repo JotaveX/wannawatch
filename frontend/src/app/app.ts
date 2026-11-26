@@ -3,6 +3,7 @@ import { ChangeDetectionStrategy, Component, computed, effect, inject } from '@a
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRouteSnapshot, NavigationEnd, Router, RouterOutlet } from '@angular/router';
 import { filter, map } from 'rxjs';
+import { AuthStore } from './core/auth/auth-store';
 import { DEFAULT_META, RouteMeta } from './layout/route-meta';
 import { SideNav } from './layout/side-nav';
 import { TabBar } from './layout/tab-bar';
@@ -39,6 +40,8 @@ export class App {
   }
 
   constructor() {
+    // a etapa do cadastro pode ter mudado em outro aparelho (ex.: confirmou o e-mail no celular)
+    inject(AuthStore).refresh();
     // O tema vai no <html> para o fundo da página inteira acompanhar.
     effect(() => {
       this.document.documentElement.dataset['theme'] = this.meta().theme;

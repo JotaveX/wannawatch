@@ -1,16 +1,17 @@
-import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
+import { AuthStore } from '../core/auth/auth-store';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { Icon } from '../shared/ui/icon';
-import { TAB_ITEMS } from './nav-items';
+import { GUEST_TAB, TAB_ITEMS } from './nav-items';
 
-/** Barra de abas inferior (celular e tablet). */
+/** Barra de abas inferior (celular e tablet). Sem login, a aba de Perfil vira "Entrar". */
 @Component({
   selector: 'ww-tab-bar',
   imports: [RouterLink, RouterLinkActive, Icon],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <nav aria-label="Navegação principal">
-      @for (item of items; track item.path) {
+      @for (item of items(); track item.path) {
         <a
           [routerLink]="item.path"
           routerLinkActive="active"
@@ -84,5 +85,10 @@ import { TAB_ITEMS } from './nav-items';
   `,
 })
 export class TabBar {
-  protected readonly items = TAB_ITEMS;
+  private readonly auth = inject(AuthStore);
+  protected readonly items = computed(() =>
+    this.auth.loggedIn()
+      ? TAB_ITEMS
+      : TAB_ITEMS.map((item) => (item.path === '/perfil' ? GUEST_TAB : item)),
+  );
 }

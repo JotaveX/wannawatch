@@ -1,0 +1,86 @@
+.page {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--ww-space-6);
+}
+.top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ww-space-4);
+}
+.brand {
+  text-decoration: none;
+}
+.quiet {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--ww-touch);
+  padding: 0 var(--ww-space-3);
+  border: 0;
+  border-radius: var(--ww-radius-pill);
+  background: none;
+  color: var(--text-2);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+}
+.quiet:hover {
+  background: var(--hover);
+  color: var(--text);
+}
+.steps {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--ww-space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.steps li {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ww-space-2);
+  padding-top: var(--ww-space-3);
+  border-top: 3px solid var(--border);
+  color: var(--text-2);
+  font-size: 13px;
+  font-weight: 500;
+  transition:
+    border-color var(--ww-medium) var(--ww-ease-out),
+    color var(--ww-medium) var(--ww-ease-out);
+}
+.steps li.done,
+.steps li.current {
+  border-color: var(--ww-pink-strong);
+  color: var(--text);
+}
+.steps li.current {
+  font-weight: 700;
+}
+.dot {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--surface-2);
+  font-size: 12px;
+  font-weight: 700;
+}
+.done .dot,
+.current .dot {
+  background: var(--ww-pink-strong);
+  color: var(--ww-white);
+}
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}

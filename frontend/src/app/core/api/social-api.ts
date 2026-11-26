@@ -3,6 +3,8 @@ import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { API_BASE_URL } from './api-config';
 import {
+  AccountResponse,
+  AccountStatus,
   CursorPage,
   FriendsLiked,
   InteractionSource,
@@ -11,6 +13,7 @@ import {
   Profile,
   ProfileActivity,
   ProfileUpdate,
+  RegisterRequest,
   Room,
   SignalKind,
   TitleCard,
@@ -19,7 +22,7 @@ import {
   UserRef,
 } from './models';
 
-/** Login, curtidas e salas de Match. O token entra sozinho pelo authInterceptor. */
+/** Login, cadastro, curtidas e salas de Match. O token entra sozinho pelo authInterceptor. */
 @Injectable({ providedIn: 'root' })
 export class SocialApi {
   private readonly http = inject(HttpClient);
@@ -35,6 +38,35 @@ export class SocialApi {
 
   me(): Observable<UserRef> {
     return this.http.get<UserRef>(`${this.base}/auth/me`);
+  }
+
+  /** Quem está logado e em que etapa do cadastro está. */
+  account(): Observable<AccountResponse> {
+    return this.http.get<AccountResponse>(`${this.base}/auth/account`);
+  }
+
+  // --- cadastro ---
+
+  /** Cria a conta (já logada) e manda o código de confirmação por e-mail. */
+  register(body: RegisterRequest): Observable<LoginResponse> {
+    return this.http.post<LoginResponse>(`${this.base}/auth/register`, body);
+  }
+
+  /** Etapa 2: 5 a 50 títulos (viram "quero ver") e o favorito, que precisa estar entre eles. */
+  pickTitles(titleIds: number[], favoriteTitleId: number | null): Observable<AccountStatus> {
+    return this.http.put<AccountStatus>(`${this.base}/me/onboarding/titles`, {
+      titleIds,
+      favoriteTitleId,
+    });
+  }
+
+  verifyEmail(code: string): Observable<AccountStatus> {
+    return this.http.post<AccountStatus>(`${this.base}/auth/email/verify`, { code });
+  }
+
+  /** No máximo um por minuto (400 antes disso). */
+  resendEmail(): Observable<void> {
+    return this.http.post<void>(`${this.base}/auth/email/resend`, null);
   }
 
   // --- perfil ---
@@ -54,7 +86,9 @@ export class SocialApi {
   // --- curtidas ---
 
   like(titleId: number, source?: InteractionSource): Observable<void> {
-    return this.http.put<void>(`${this.base}/likes/${titleId}`, null, { params: sourceParam(source) });
+    return this.http.put<void>(`${this.base}/likes/${titleId}`, null, {
+      params: sourceParam(source),
+    });
   }
 
   unlike(titleId: number, source?: InteractionSource): Observable<void> {
@@ -121,21 +155,35 @@ export class SocialApi {
   }
 
   leaveRoom(code: string): Observable<void> {
-    return this.http.delete<void>(`${this.base}/match/rooms/${encodeURIComponent(code)}/participants/me`);
+    return this.http.delete<void>(
+      `${this.base}/match/rooms/${encodeURIComponent(code)}/participants/me`,
+    );
   }
 
-  roomDeck(code: string, cursor: string | null | undefined, size = 20): Observable<CursorPage<TitleCard>> {
+  roomDeck(
+    code: string,
+    cursor: string | null | undefined,
+    size = 20,
+  ): Observable<CursorPage<TitleCard>> {
     let params = new HttpParams().set('size', size);
     if (cursor) params = params.set('cursor', cursor);
-    return this.http.get<CursorPage<TitleCard>>(`${this.base}/match/rooms/${encodeURIComponent(code)}/deck`, { params });
+    return this.http.get<CursorPage<TitleCard>>(
+      `${this.base}/match/rooms/${encodeURIComponent(code)}/deck`,
+      { params },
+    );
   }
 
   vote(code: string, titleId: number, liked: boolean): Observable<Room> {
-    return this.http.put<Room>(`${this.base}/match/rooms/${encodeURIComponent(code)}/votes/${titleId}`, { liked });
+    return this.http.put<Room>(
+      `${this.base}/match/rooms/${encodeURIComponent(code)}/votes/${titleId}`,
+      { liked },
+    );
   }
 
   unvote(code: string, titleId: number): Observable<Room> {
-    return this.http.delete<Room>(`${this.base}/match/rooms/${encodeURIComponent(code)}/votes/${titleId}`);
+    return this.http.delete<Room>(
+      `${this.base}/match/rooms/${encodeURIComponent(code)}/votes/${titleId}`,
+    );
   }
 }
 

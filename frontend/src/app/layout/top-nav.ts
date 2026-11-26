@@ -1,4 +1,11 @@
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, DestroyRef, inject, input } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  ChangeDetectorRef,
+  Component,
+  DestroyRef,
+  inject,
+  input,
+} from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { AuthStore } from '../core/auth/auth-store';
 import { Avatar } from '../shared/ui/avatar';
@@ -18,7 +25,9 @@ import { ActiveSlider } from './active-slider';
   host: { '[class.solid]': '!overImage()', '(window:resize)': 'slider.measure()' },
   template: `
     <header>
-      <a routerLink="/" class="brand" aria-label="wannawatch? — início"><ww-logo [size]="26" [mark]="true" /></a>
+      <a routerLink="/" class="brand" aria-label="wannawatch? — início"
+        ><ww-logo [size]="26" [mark]="true"
+      /></a>
 
       <nav aria-label="Seções">
         <span
@@ -30,8 +39,15 @@ import { ActiveSlider } from './active-slider';
           [style.width.px]="slider.box()?.w ?? 0"
         ></span>
         <div class="items">
-          <a #search routerLink="/busca" class="search" aria-label="Buscar" routerLinkActive="active" ariaCurrentWhenActive="page"
-             (isActiveChange)="track(search, $event)">
+          <a
+            #search
+            routerLink="/busca"
+            class="search"
+            aria-label="Buscar"
+            routerLinkActive="active"
+            ariaCurrentWhenActive="page"
+            (isActiveChange)="track(search, $event)"
+          >
             <ww-icon name="search" [size]="18" [stroke]="2.2" />
           </a>
           @for (link of links; track link.path) {
@@ -43,7 +59,8 @@ import { ActiveSlider } from './active-slider';
               [routerLinkActiveOptions]="{ exact: link.path === '/' }"
               ariaCurrentWhenActive="page"
               (isActiveChange)="track(a, $event)"
-            >{{ link.label }}</a>
+              >{{ link.label }}</a
+            >
           }
         </div>
       </nav>
@@ -52,6 +69,8 @@ import { ActiveSlider } from './active-slider';
         <a routerLink="/perfil" class="avatar" [attr.aria-label]="'Perfil de ' + user.displayName">
           <ww-avatar [user]="user" [size]="44" />
         </a>
+      } @else {
+        <a routerLink="/entrar" class="enter">Entrar</a>
       }
     </header>
   `,
@@ -159,6 +178,22 @@ import { ActiveSlider } from './active-slider';
       border-radius: 50%;
       text-decoration: none;
       transition: transform var(--ww-medium) var(--ww-ease-spring);
+    }
+    .enter {
+      display: inline-flex;
+      align-items: center;
+      min-height: var(--ww-touch);
+      padding: 0 18px;
+      border-radius: var(--ww-radius-pill);
+      background: var(--ww-white);
+      color: var(--ww-bg-dark);
+      font-size: 14px;
+      font-weight: 600;
+      text-decoration: none;
+      transition: transform var(--ww-medium) var(--ww-ease-spring);
+    }
+    .enter:hover {
+      transform: scale(1.04);
     }
     .avatar:hover {
       transform: scale(1.06) rotate(-3deg);

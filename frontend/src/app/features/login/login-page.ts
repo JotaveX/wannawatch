@@ -1,63 +1,82 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { ChangeDetectionStrategy, Component, inject, input, isDevMode, signal } from '@angular/core';
-import { Router } from '@angular/router';
+import { ChangeDetectionStrategy, Component, inject, input, signal } from '@angular/core';
+import { Router, RouterLink } from '@angular/router';
 import { AuthStore } from '../../core/auth/auth-store';
+import { AuthFrame } from '../../shared/ui/auth-frame';
 import { Button } from '../../shared/ui/button';
 import { Logo } from '../../shared/ui/logo';
 
-/** Não há cadastro: as contas são criadas pela migration do back (veja o README). */
+/** Entrar com usuário (ou e-mail) e senha. Quem não terminou o cadastro segue para /cadastro. */
 @Component({
   selector: 'ww-login-page',
-  imports: [Button, Logo],
+  imports: [AuthFrame, Button, Logo, RouterLink],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <section aria-labelledby="entrar">
-      <ww-logo [size]="34" [mark]="true" />
-      <h1 id="entrar">Entrar</h1>
-      <p class="lead">Veja o que a galera curtiu e dê match no filme de hoje.</p>
+    <ww-auth-frame art="entrar">
+      <section aria-labelledby="entrar">
+        <ww-logo class="brand" [size]="30" [mark]="true" />
+        <h1 id="entrar">Que bom te ver de novo!</h1>
+        <p class="lead">Entre para ver o que a galera curtiu e dar match no filme de hoje.</p>
 
-      <form (submit)="submit($event)" novalidate>
-        <label>
-          <span>Usuário</span>
-          <input name="username" autocomplete="username" autocapitalize="none" spellcheck="false" required
-                 [value]="username()" (input)="username.set($any($event.target).value)" />
-        </label>
-        <label>
-          <span>Senha</span>
-          <input name="password" type="password" autocomplete="current-password" required
-                 [value]="password()" (input)="password.set($any($event.target).value)" />
-        </label>
-        @if (error(); as error) {
-          <p class="error" role="alert">{{ error }}</p>
-        }
-        <button wwButton variant="primary" size="lg" type="submit" [disabled]="busy()">
-          {{ busy() ? 'Entrando…' : 'Entrar' }}
-        </button>
-      </form>
+        <form (submit)="submit($event)" novalidate>
+          <label>
+            <span>Usuário ou e-mail</span>
+            <input
+              name="username"
+              autocomplete="username"
+              autocapitalize="none"
+              spellcheck="false"
+              required
+              [value]="username()"
+              (input)="username.set($any($event.target).value)"
+            />
+          </label>
+          <label>
+            <span>Senha</span>
+            <input
+              name="password"
+              type="password"
+              autocomplete="current-password"
+              required
+              [value]="password()"
+              (input)="password.set($any($event.target).value)"
+            />
+          </label>
+          @if (error(); as error) {
+            <p class="error" role="alert">{{ error }}</p>
+          }
+          <button wwButton variant="primary" size="lg" type="submit" [disabled]="busy()">
+            {{ busy() ? 'Entrando…' : 'Entrar' }}
+          </button>
+        </form>
 
-      @if (dev) {
-        <p class="hint">Contas de teste: <strong>jotave</strong>, <strong>bia</strong> e <strong>caio</strong>, senha <strong>wannawatch</strong>.</p>
-      }
-    </section>
+        <p class="signup">
+          Ainda não tem conta?
+          <a routerLink="/cadastro" [queryParams]="volta() ? { volta: volta() } : {}"
+            >Criar conta</a
+          >
+        </p>
+      </section>
+    </ww-auth-frame>
   `,
   styles: `
-    :host {
-      display: grid;
-      place-items: center;
-      min-height: 100dvh;
-      padding: var(--ww-space-8) var(--ww-page-x);
-    }
     section {
       display: flex;
       flex-direction: column;
       gap: var(--ww-space-3);
-      width: min(100%, 380px);
+      width: min(100%, 360px);
+      margin: 0 auto;
+      text-align: center;
+    }
+    .brand {
+      align-self: center;
     }
     h1 {
       margin-top: var(--ww-space-6);
-      font-size: 34px;
+      font-size: 32px;
       font-weight: 800;
       letter-spacing: var(--ww-tracking-display);
+      line-height: 1.1;
     }
     .lead {
       color: var(--text-2);
@@ -66,7 +85,8 @@ import { Logo } from '../../shared/ui/logo';
       display: flex;
       flex-direction: column;
       gap: var(--ww-space-4);
-      margin-top: var(--ww-space-4);
+      margin-top: var(--ww-space-6);
+      text-align: left;
     }
     label {
       display: flex;
@@ -98,10 +118,17 @@ import { Logo } from '../../shared/ui/logo';
     button {
       margin-top: var(--ww-space-2);
     }
-    .hint {
-      margin-top: var(--ww-space-4);
+    .signup {
+      margin-top: var(--ww-space-6);
       color: var(--text-2);
-      font-size: 13px;
+      font-size: 14px;
+    }
+    .signup a {
+      display: inline-flex;
+      align-items: center;
+      min-height: var(--ww-touch);
+      color: var(--link);
+      font-weight: 600;
     }
   `,
 })
@@ -111,7 +138,6 @@ export class LoginPage {
 
   private readonly auth = inject(AuthStore);
   private readonly router = inject(Router);
-  protected readonly dev = isDevMode();
 
   protected readonly username = signal('');
   protected readonly password = signal('');
@@ -128,10 +154,20 @@ export class LoginPage {
     this.busy.set(true);
     this.error.set(null);
     this.auth.login(this.username().trim(), this.password()).subscribe({
-      next: () => this.router.navigateByUrl(safeReturn(this.volta())),
+      next: ({ account }) => {
+        const back = safeReturn(this.volta());
+        if (account.complete) this.router.navigateByUrl(back);
+        // cadastro pela metade: continua de onde parou
+        else
+          this.router.navigate(['/cadastro'], { queryParams: back !== '/' ? { volta: back } : {} });
+      },
       error: (e: HttpErrorResponse) => {
         this.busy.set(false);
-        this.error.set(e.status === 401 ? 'Usuário ou senha incorretos.' : 'Não deu pra entrar agora. O back-end está rodando?');
+        this.error.set(
+          e.status === 401
+            ? 'Usuário ou senha incorretos.'
+            : 'Não deu pra entrar agora. O back-end está rodando?',
+        );
       },
     });
   }

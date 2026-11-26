@@ -17,6 +17,9 @@ export const TAB_ITEMS: NavItem[] = [
   { label: 'Perfil', path: '/perfil', icon: 'profile' },
 ];
 
+/** Sem login, no lugar do Perfil. */
+export const GUEST_TAB: NavItem = { label: 'Entrar', path: '/entrar', icon: 'profile' };
+
 /** Barra lateral do desktop (estilo TikTok web). */
 export const SIDE_ITEMS: NavItem[] = [
   { label: 'Início', path: '/', icon: 'home', exact: true },
