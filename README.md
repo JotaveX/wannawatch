@@ -78,9 +78,9 @@ Documentação interativa (Swagger): <http://localhost:8081/swagger-ui.html>
 | `GET /api/genres?type=` | Gêneros, com quantos títulos cada um tem |
 | `GET /api/titles?type=&genre=&sort=&page=&size=` | Lista paginada (`sort`: `POPULARITY`, `RATING`, `RELEASE`) |
 | `GET /api/titles/{id}` | Detalhe completo: elenco, equipe, trailer, onde assistir, parecidos |
-| `GET /api/home` | Destaque e fileiras da Home |
-| `GET /api/swipe/deck?seed=&cursor=&size=` | Deck do Swipe: aleatório, mas fixo por `seed` |
-| `GET /api/reels?cursor=&size=` | Feed do Reels por popularidade |
+| `GET /api/home` | Destaque e fileiras da Home (com login: personalizadas, com "Pra você") |
+| `GET /api/swipe/deck?seed=&cursor=&size=` | Deck do Swipe: com login, personalizado (varia com a `seed`); sem, aleatório fixo por `seed` |
+| `GET /api/reels?cursor=&size=` | Feed do Reels: com login, personalizado; sem, por popularidade |
 | `GET /api/search?q=&page=&size=` | Busca fuzzy por título, pessoa e gênero |
 | `POST /api/auth/login` · `POST /api/auth/logout` · `GET /api/auth/me` | Login (devolve o token) |
 | `PUT`/`DELETE /api/likes/{titleId}?source=` | "Quero ver" |
@@ -98,8 +98,12 @@ Documentação interativa (Swagger): <http://localhost:8081/swagger-ui.html>
 - `type` é `MOVIE` ou `SERIES`; `genre` é o slug (ex.: `ficcao-cientifica`).
 - `source` (opcional) diz de que tela veio a interação: `SWIPE`, `REELS`, `DETAILS`, `HOME` ou `MATCH`.
 - Listas com cursor devolvem `{ items, nextCursor }`; `nextCursor` nulo = acabou.
+- Todo card de título (`TitleCard`) tem `reason`: `{ kind, text }` com o motivo da recomendação
+  (ex.: `"Porque você curtiu Dark"`) nas listas personalizadas, e `null` nas outras.
 - Erros seguem o formato ProblemDetail (`{ status, title, detail }`).
 - Catálogo é aberto; curtidas, sinais, Match e `/auth/me` exigem `Authorization: Bearer <token>` (401 sem ele).
+  Home, Swipe e Reels aceitam o token opcionalmente: sem ele respondem como antes; com um token
+  inválido dão 401.
 - CORS: origens liberadas em `CORS_ALLOWED_ORIGINS` (padrão `http://localhost:4200`).
 
 ## 4. Front-end

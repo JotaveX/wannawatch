@@ -29,7 +29,7 @@ import { LikedBy } from './liked-by';
       <div class="shade" aria-hidden="true"></div>
 
       <div class="text">
-        <ww-liked-by [titleId]="card().id" />
+        <ww-liked-by [titleId]="card().id" [reason]="card().reason?.text" />
         <span class="kicker">Sinopse</span>
         <p class="synopsis">{{ card().overview }}</p>
         <div class="name">

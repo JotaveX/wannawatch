@@ -55,7 +55,7 @@ export class SwipePage {
 
   protected readonly currentLikedBy = computed(() => {
     const c = this.store.current();
-    return c ? likedByLabel(this.likes.friends(c.id)) : null;
+    return c ? (likedByLabel(this.likes.friends(c.id)) ?? c.reason?.text ?? null) : null;
   });
 
   protected readonly currentFacts = computed(() => {

@@ -23,7 +23,7 @@ describe('ReelsPage', () => {
     const fixture = TestBed.createComponent(ReelsPage);
     await fixture.whenStable();
     http.expectOne((r) => r.url === '/api/reels').flush({
-      items: [card(1, { title: 'Primeiro', overview: 'Sinopse um.' }), card(2, { title: 'Segundo' }), card(3, { title: 'Terceiro' })],
+      items: [card(1, { title: 'Primeiro', overview: 'Sinopse um.' }), card(2, { title: 'Segundo', reason: { kind: 'PERSON', text: 'De Christopher Nolan' } }), card(3, { title: 'Terceiro' })],
       nextCursor: null,
     });
     await fixture.whenStable();
@@ -58,6 +58,8 @@ describe('ReelsPage', () => {
     expect(first.querySelector('button[aria-label="Quero ver"]')?.getAttribute('aria-pressed')).toBe('true');
     expect(first.querySelector('.actions span')?.textContent).toBe('3');
     expect(second.querySelectorAll('.sphere').length).toBe(0);
+    // sem amigos, o motivo da recomendação ocupa o lugar
+    expect(second.querySelector('ww-liked-by .label')?.textContent).toBe('De Christopher Nolan');
   });
 
   it('J/K e setas navegam e o painel acompanha', async () => {

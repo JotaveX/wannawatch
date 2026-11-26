@@ -1,6 +1,7 @@
 package br.com.jotave.wannawatch.catalog.api;
 
 import br.com.jotave.wannawatch.catalog.domain.MediaType;
+import br.com.jotave.wannawatch.recommendation.domain.Reason;
 import com.fasterxml.jackson.annotation.JsonUnwrapped;
 import java.time.LocalDate;
 import java.util.List;
@@ -18,7 +19,10 @@ public final class CatalogDtos {
     /** URL completa da imagem em dois tamanhos (para srcset). */
     public record ImageSet(String small, String large) {}
 
-    /** Formato usado em todas as listas (Home, Swipe, Reels, busca, parecidos). */
+    /**
+     * Formato usado em todas as listas (Home, Swipe, Reels, busca, parecidos). {@code reason} só vem
+     * nas listas personalizadas (por que o título apareceu para quem está logado); nas outras é nulo.
+     */
     public record TitleCard(
             long id,
             MediaType mediaType,
@@ -31,7 +35,14 @@ public final class CatalogDtos {
             String ageRating,
             Double voteAverage,
             ImageSet poster,
-            ImageSet backdrop) {}
+            ImageSet backdrop,
+            Reason reason) {
+
+        public TitleCard withReason(Reason reason) {
+            return new TitleCard(id, mediaType, title, year, genres, overview, runtimeMinutes, seasonsCount,
+                    ageRating, voteAverage, poster, backdrop, reason);
+        }
+    }
 
     public record TitleDetail(
             @JsonUnwrapped TitleCard card,
@@ -77,7 +88,7 @@ public final class CatalogDtos {
 
     public record HomeHero(@JsonUnwrapped TitleCard card, String tagline, String trailerUrl) {}
 
-    public enum RowKind { TOP10, SIMILAR, BINGE, GENRE, TOP_RATED }
+    public enum RowKind { TOP10, FOR_YOU, SIMILAR, BINGE, GENRE, TOP_RATED }
 
     public record HomeRow(String key, RowKind kind, String title, List<TitleCard> items) {}
 

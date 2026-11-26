@@ -1,5 +1,6 @@
 package br.com.jotave.wannawatch.catalog.api;
 
+import br.com.jotave.wannawatch.auth.AuthUser;
 import br.com.jotave.wannawatch.catalog.api.CatalogDtos.GenreResponse;
 import br.com.jotave.wannawatch.catalog.api.CatalogDtos.HomeResponse;
 import br.com.jotave.wannawatch.catalog.api.CatalogDtos.SearchHit;
@@ -21,6 +22,7 @@ import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import java.util.List;
+import java.util.Optional;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -69,31 +71,33 @@ public class CatalogController {
     }
 
     @GetMapping("/home")
-    @Operation(summary = "Destaque e fileiras da Home")
-    public HomeResponse home() {
-        return home.home();
+    @Operation(summary = "Destaque e fileiras da Home (personalizadas com login)")
+    public HomeResponse home(@Parameter(hidden = true) Optional<AuthUser> user) {
+        return home.home(user);
     }
 
     @GetMapping("/swipe/deck")
-    @Operation(summary = "Lote de títulos para o Swipe, em ordem aleatória fixa por seed")
+    @Operation(summary = "Lote de títulos para o Swipe: personalizado com login, aleatório fixo por seed sem")
     public CursorResponse<TitleCard> swipeDeck(
+            @Parameter(hidden = true) Optional<AuthUser> user,
             @Parameter(description = "gerado pelo front a cada sessão") @RequestParam
             @Pattern(regexp = "[A-Za-z0-9_-]{1,64}") String seed,
             @RequestParam(required = false) String cursor,
             @RequestParam(defaultValue = "20") @Min(1) @Max(50) int size,
             @RequestParam(required = false) MediaType type,
             @RequestParam(required = false) String genre) {
-        return feeds.swipeDeck(seed, cursor, size, type, genre);
+        return feeds.swipeDeck(user, seed, cursor, size, type, genre);
     }
 
     @GetMapping("/reels")
-    @Operation(summary = "Feed do Reels por popularidade, paginado por cursor")
+    @Operation(summary = "Feed do Reels, paginado por cursor: personalizado com login, por popularidade sem")
     public CursorResponse<TitleCard> reels(
+            @Parameter(hidden = true) Optional<AuthUser> user,
             @RequestParam(required = false) String cursor,
             @RequestParam(defaultValue = "10") @Min(1) @Max(50) int size,
             @RequestParam(required = false) MediaType type,
             @RequestParam(required = false) String genre) {
-        return feeds.reels(cursor, size, type, genre);
+        return feeds.reels(user, cursor, size, type, genre);
     }
 
     @GetMapping("/search")

@@ -3,6 +3,7 @@ package br.com.jotave.wannawatch.catalog.application;
 import br.com.jotave.wannawatch.catalog.api.CatalogDtos.GenreRef;
 import br.com.jotave.wannawatch.catalog.api.CatalogDtos.TitleCard;
 import br.com.jotave.wannawatch.catalog.domain.MediaType;
+import br.com.jotave.wannawatch.recommendation.domain.Reason;
 import java.sql.Date;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -66,11 +67,17 @@ public class TitleCards {
                             rs.getString("age_rating"),
                             (Double) rs.getObject("vote_average"),
                             images.poster(rs.getString("poster_path")),
-                            images.backdrop(rs.getString("backdrop_path"))));
+                            images.backdrop(rs.getString("backdrop_path")),
+                            null));
                     return null;
                 })
                 .list();
 
         return ids.stream().map(byId::get).filter(Objects::nonNull).toList();
+    }
+
+    /** Como {@link #load}, com o motivo de cada título (os que não estão no mapa ficam sem). */
+    public List<TitleCard> load(List<Long> ids, Map<Long, Reason> reasons) {
+        return load(ids).stream().map(c -> reasons.containsKey(c.id()) ? c.withReason(reasons.get(c.id())) : c).toList();
     }
 }

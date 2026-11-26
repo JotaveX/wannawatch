@@ -34,6 +34,23 @@ describe('buildHomeRows', () => {
     expect(similar.kind !== 'TOP10' && similar.items[0].sub).toBe('Filme · Ficção científica · 2h10');
   });
 
+  it('"Pra você" vem logo depois do top 10, antes dos amigos, com o motivo embaixo de cada card', () => {
+    const forYou = {
+      key: 'for-you',
+      kind: 'FOR_YOU' as const,
+      title: 'Pra você',
+      items: [card(70, { reason: { kind: 'BECAUSE_LIKED', text: 'Porque você curtiu Dark' } }), card(71)],
+    };
+    const base = homeResponse();
+    const rows = buildHomeRows({ ...base, rows: [base.rows[0], forYou, ...base.rows.slice(1)] }, friends);
+    expect(rows.map((r) => r.kind)).toEqual(['TOP10', 'FOR_YOU', 'FRIENDS', 'SIMILAR', 'BINGE']);
+    const row = rows[1];
+    expect(row.kind !== 'TOP10' && row.items.map((i) => i.sub)).toEqual([
+      'Porque você curtiu Dark',
+      'Filme · Ficção científica · 2h10',
+    ]);
+  });
+
   it('some com fileiras vazias', () => {
     expect(buildHomeRows(homeResponse({ hero: null, rows: [] }), [])).toEqual([]);
   });

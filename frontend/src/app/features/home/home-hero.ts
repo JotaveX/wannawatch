@@ -196,7 +196,10 @@ export class HomeHero {
   protected readonly type = computed(() => typeLabel(this.hero()));
   protected readonly link = computed(() => titleLink(this.hero()));
   /** "Bia e Caio curtiram", se alguém curtiu */
-  protected readonly reason = computed(() => likedByLabel(this.likes.friends(this.hero().id)));
+  /** "Bia curtiu" tem prioridade; senão, o motivo da recomendação */
+  protected readonly reason = computed(
+    () => likedByLabel(this.likes.friends(this.hero().id)) ?? this.hero().reason?.text ?? null,
+  );
   protected readonly meta = computed(() => {
     const h = this.hero();
     return [h.genres[0]?.name, h.year ? String(h.year) : null, length(h)].filter((p): p is string => !!p);

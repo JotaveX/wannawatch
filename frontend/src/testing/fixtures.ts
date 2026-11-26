@@ -14,6 +14,7 @@ export function card(id: number, over: Partial<TitleCard> = {}): TitleCard {
     voteAverage: 7.5,
     poster: null,
     backdrop: null,
+    reason: null,
     ...over,
   };
 }

@@ -36,6 +36,16 @@ export interface TitleCard {
   voteAverage: number | null;
   poster: ImageSet | null;
   backdrop: ImageSet | null;
+  /** Por que o título apareceu (só nas listas personalizadas; nas outras é null). */
+  reason: Reason | null;
+}
+
+export type ReasonKind = 'BECAUSE_LIKED' | 'PERSON' | 'GENRE' | 'GROUP' | 'WANTED_BY' | 'POPULAR';
+
+/** Motivo da recomendação, com o texto pronto ("Porque você curtiu Dark", "Bom pra você e pra Bia"). */
+export interface Reason {
+  kind: ReasonKind;
+  text: string;
 }
 
 export interface CastMember {
@@ -103,7 +113,7 @@ export interface HomeHero extends TitleCard {
   trailerUrl: string | null;
 }
 
-export type RowKind = 'TOP10' | 'SIMILAR' | 'BINGE' | 'GENRE' | 'TOP_RATED';
+export type RowKind = 'TOP10' | 'FOR_YOU' | 'SIMILAR' | 'BINGE' | 'GENRE' | 'TOP_RATED';
 
 export interface HomeRow {
   key: string;

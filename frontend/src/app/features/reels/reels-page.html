@@ -70,7 +70,7 @@
             }
           </ul>
         }
-        <ww-liked-by [titleId]="c.id" />
+        <ww-liked-by [titleId]="c.id" [reason]="c.reason?.text" />
         <a wwButton variant="outline" size="sm" [routerLink]="titleLink(c)">Mais informações</a>
       </section>
     }

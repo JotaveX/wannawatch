@@ -7,12 +7,13 @@ import { Icon } from '../../shared/ui/icon';
 /**
  * Esferas flutuantes com os amigos que curtiram, no canto inferior esquerdo do reel.
  * Balançam devagar, cada uma num tempo; param com "reduzir movimento".
+ * Sem amigos, mostra só o motivo da recomendação, quando houver.
  */
 @Component({
   selector: 'ww-liked-by',
   imports: [Avatar, Icon],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  host: { '[class.none]': '!friends().length' },
+  host: { '[class.none]': '!label()' },
   template: `
     @if (friends().length) {
       <span class="spheres" aria-hidden="true">
@@ -23,6 +24,8 @@ import { Icon } from '../../shared/ui/icon';
         }
       </span>
       <span class="label">{{ label() }}</span>
+    } @else if (reason()) {
+      <span class="label reason">{{ reason() }}</span>
     }
   `,
   styles: `
@@ -56,6 +59,9 @@ import { Icon } from '../../shared/ui/icon';
       background: var(--ww-pink);
       color: var(--ww-white);
     }
+    .label.reason {
+      margin-left: 0;
+    }
     .label {
       margin-left: 8px;
       font-size: 13px;
@@ -79,9 +85,11 @@ import { Icon } from '../../shared/ui/icon';
 })
 export class LikedBy {
   readonly titleId = input.required<number>();
+  /** texto do motivo da recomendação; só aparece quando nenhum amigo curtiu */
+  readonly reason = input<string | null | undefined>(null);
   private readonly likes = inject(LikesStore);
   protected readonly friends = computed<UserRef[]>(() => this.likes.friends(this.titleId()));
   /** no máximo 3 esferas; o texto conta o resto */
   protected readonly shown = computed(() => this.friends().slice(0, 3));
-  protected readonly label = computed(() => likedByLabel(this.friends()));
+  protected readonly label = computed(() => likedByLabel(this.friends()) ?? this.reason() ?? null);
 }

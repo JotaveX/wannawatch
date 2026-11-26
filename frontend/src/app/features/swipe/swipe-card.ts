@@ -65,12 +65,13 @@ const OUT: Record<Decision, [number, number, number]> = {
     '(dragstart)': '$event.preventDefault()',
   },
   template: `
-    <article [attr.aria-labelledby]="'card-' + card().id" [attr.aria-hidden]="interactive() ? null : true">
+    <article [attr.aria-labelledby]="'card-' + card().id" [attr.aria-describedby]="badge() ? 'badge-' + card().id : null"
+             [attr.aria-hidden]="interactive() ? null : true">
       <div class="media">
         <ww-poster ratio="fill" [image]="card().poster" [widths]="[342, 780]" sizes="420px"
                    [seed]="card().id" [title]="card().title" [eager]="true" />
-        @if (likedBy(); as likedBy) {
-          <span class="badge">{{ likedBy }}</span>
+        @if (badge(); as badge) {
+          <span class="badge" [id]="'badge-' + card().id">{{ badge }}</span>
         }
         @if (interactive()) {
           <a wwIconButton variant="light" class="info" [routerLink]="link()"
@@ -103,8 +104,10 @@ export class SwipeCard {
   readonly decided = output<Decision>();
 
   private readonly likes = inject(LikesStore);
-  /** "Bia curtiu" */
-  protected readonly likedBy = computed(() => likedByLabel(this.likes.friends(this.card().id)));
+  /** "Bia curtiu" tem prioridade; senão, o motivo da recomendação ("Porque você curtiu Dark") */
+  protected readonly badge = computed(
+    () => likedByLabel(this.likes.friends(this.card().id)) ?? this.card().reason?.text ?? null,
+  );
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
 
   protected readonly dx = signal(0);
