@@ -31,8 +31,8 @@ import org.springframework.transaction.support.TransactionTemplate;
 /**
  * Busca vídeos curtos dos títulos na API do YouTube e guarda os metadados em {@code title_video}
  * como PENDING, para revisão. Só ficam os verticais (o Reels é em tela cheia, 9:16); a busca não
- * filtra por formato, então traz vários e descarta os horizontais. Fase de teste: roda só sob
- * demanda, poucos títulos por vez.
+ * filtra por formato, então traz vários e descarta os horizontais. Roda sob demanda (tela de
+ * revisão) e todo dia pelo GitHub Actions ({@code .github/workflows/videos.yml}), poucos títulos por vez.
  */
 @Service
 public class VideoDiscoveryService {
@@ -83,10 +83,10 @@ public class VideoDiscoveryService {
                 skipped += all.size() - vertical.size();
             } catch (YoutubeException e) {
                 log.warn("Busca de vídeos parou em \"{}\": {}", query, e.getMessage());
-                return new DiscoverResult(searched, found, skipped, e.getMessage());
+                return new DiscoverResult(searched, found, skipped, e.getMessage(), e.quotaExceeded());
             }
         }
-        return new DiscoverResult(searched, found, skipped, null);
+        return new DiscoverResult(searched, found, skipped, null, false);
     }
 
     private List<TitleRow> pickTitles(int n, DiscoverRequest req) {

@@ -162,8 +162,31 @@ class VideoAdminIntegrationTest {
         mvc.perform(discover("{\"limit\":3}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.titlesSearched").value(1))
-                .andExpect(jsonPath("$.error").value("A cota diária da API do YouTube acabou."));
+                .andExpect(jsonPath("$.error").value("A cota diária da API do YouTube acabou."))
+                .andExpect(jsonPath("$.quotaExceeded").value(true));
         assertThat(jdbc.sql("SELECT count(*) FROM title_video_search").query(Long.class).single()).isEqualTo(1);
+    }
+
+    @Test
+    void buscaAutomaticaUsaOAdminToken() throws Exception {
+        when(youtube.searchShortVideos(anyString())).thenReturn(List.of());
+        when(youtube.videos(List.of())).thenReturn(List.of());
+
+        mvc.perform(post("/api/admin/videos/discover/auto")).andExpect(status().isUnauthorized());
+        mvc.perform(post("/api/admin/videos/discover/auto").header("X-Admin-Token", "errado"))
+                .andExpect(status().isUnauthorized());
+        mvc.perform(post("/api/admin/videos/discover/auto").header("Authorization", "Bearer " + admin))
+                .andExpect(status().isUnauthorized());
+        verify(youtube, never()).searchShortVideos(anyString());
+
+        mvc.perform(post("/api/admin/videos/discover/auto").header("X-Admin-Token", "test-admin")
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"limit\":20}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.titlesSearched").value(3))
+                .andExpect(jsonPath("$.quotaExceeded").value(false));
+        // tudo já buscado: a próxima rodada volta vazia (é assim que o job sabe que acabou)
+        mvc.perform(post("/api/admin/videos/discover/auto").header("X-Admin-Token", "test-admin"))
+                .andExpect(jsonPath("$.titlesSearched").value(0));
     }
 
     @Test

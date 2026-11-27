@@ -37,7 +37,7 @@ O `.env` fica fora do git. Ele é lido pelo docker-compose e pelo back-end. Pree
 
 - `TMDB_API_TOKEN`: o **API Read Access Token** da sua conta em
   <https://www.themoviedb.org/settings/api> (uso não comercial é gratuito).
-- `ADMIN_TOKEN`: qualquer valor secreto; protege o endpoint que dispara a importação.
+- `ADMIN_TOKEN`: qualquer valor secreto; protege os endpoints de importação e da busca automática de vídeos.
   Gere um com `openssl rand -hex 16`. Vazio = endpoint desligado.
 - `YOUTUBE_API_KEY`: chave da YouTube Data API v3
   (<https://console.cloud.google.com/apis/credentials>), usada no teste dos vídeos do Reels.
@@ -118,6 +118,7 @@ Documentação interativa (Swagger): <http://localhost:8081/swagger-ui.html>
 | `PUT …/votes/{titleId}` (`{ liked }`) · `DELETE …/votes/{titleId}` | Votar · desfazer voto |
 | `DELETE …/participants/me` | Sair da sala |
 | `POST /api/admin/videos/discover` (`{ limit?, titleIds?, skipApproved?, includeSearched?, source?, type?, genre?, yearFrom?, yearTo? }`) | Admin: busca Shorts no YouTube para `limit` títulos (1 a 20, padrão 10) e guarda só os verticais. Por padrão pega os mais populares ainda não buscados e pula quem já tem vídeo aprovado (`skipApproved: false` desliga); `includeSearched` busca de novo os já buscados; `source` = `POPULAR` / `TRENDING` (em alta) / `TOP_RATED` (≥100 votos) / `RECENT` (lançamentos); `type`, `genre` (slug) e `yearFrom`/`yearTo` filtram. `titleIds` ignora os filtros |
+| `POST /api/admin/videos/discover/auto` (mesmo corpo) | Mesma busca, sem login: header `X-Admin-Token` (o `ADMIN_TOKEN`; vazio = 404). Usado pelo job diário do GitHub Actions. A resposta traz `quotaExceeded` (a rodada parou porque a cota acabou), como a do `/discover` |
 | `GET /api/admin/videos` · `PATCH /api/admin/videos/{id}` (`{ status }`) | Admin: títulos buscados com os vídeos achados (cada vídeo traz `reviewedAt`, quando foi aprovado/reprovado) · aprovar/reprovar (`PENDING`, `APPROVED`, `REJECTED`; voltar a `PENDING` limpa a data) |
 
 - `type` é `MOVIE` ou `SERIES`; `genre` é o slug (ex.: `ficcao-cientifica`).
@@ -172,7 +173,8 @@ Organização (`src/app`):
 Num push na `main` com os testes verdes, publica o front (`wrangler deploy`), monta a imagem
 `ghcr.io/jotavex/wannawatch-api` e atualiza a VPS. Segredos do repositório: `CLOUDFLARE_API_TOKEN`
 (modelo "Edit Cloudflare Workers"), `CLOUDFLARE_ACCOUNT_ID`, `DEPLOY_SSH_KEY`, `DEPLOY_KNOWN_HOSTS` e
-`DEPLOY_TARGET` (`root@<ip>`).
+`DEPLOY_TARGET` (`root@<ip>`). Fora isso, `.github/workflows/videos.yml` busca vídeos do Reels todo
+dia (segredo `ADMIN_TOKEN`; veja "Vídeos do Reels").
 
 **Na VPS** (`/opt/wannawatch`): `compose.yml` e `deploy.sh` são cópias de `deploy/` (mudou um deles,
 copie de novo com `scp`); os segredos ficam em `.env` (chmod 600, modelo em `deploy/.env.example`).
@@ -247,6 +249,11 @@ Em teste: achar vídeos curtos de cada título para o Reels virar vídeo de verd
   proíbem guardar o conteúdo, então ele toca pelo player oficial (embed).
 - Cada título buscado fica em `title_video_search`, mesmo sem resultado, e não é buscado de novo
   (a não ser pedindo por `titleIds`). A cota padrão é de 100 buscas por dia.
+- **Busca diária**: `.github/workflows/videos.yml` roda todo dia às 06h (Brasília), logo depois de a
+  cota voltar, e chama `POST /api/admin/videos/discover/auto` de 20 em 20 títulos (os mais populares
+  ainda não buscados, pulando quem já tem vídeo aprovado) até a cota acabar ou não sobrar título. O
+  resumo da execução mostra quantos vídeos novos entraram. Precisa do segredo `ADMIN_TOKEN` no
+  repositório (o mesmo do `.env` da VPS); dá para rodar na mão em Actions → videos → Run workflow.
 - Tudo entra como `PENDING`; a revisão é em `/admin/videos`, só para administradores
   (`app_user.is_admin`; hoje só o `jvpiloni`, marcado na migration V12).
 - **No Reels**: entra o vídeo aprovado, embutível e não bloqueado no Brasil (com mais de um, o mais

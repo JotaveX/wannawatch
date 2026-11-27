@@ -1,0 +1,55 @@
+# Todo dia busca Shorts no YouTube para os títulos do catálogo até a cota diária acabar (ou até não
+# sobrar título para buscar). Tudo entra como PENDING, para revisar em /admin/videos.
+# A cota da YouTube Data API volta à meia-noite do Pacífico (07h/08h UTC): roda às 09h UTC (06h em
+# Brasília), com ela cheia. Também dá para rodar na mão em Actions → videos → Run workflow.
+name: videos
+
+on:
+  schedule:
+    - cron: "0 9 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: videos
+  cancel-in-progress: false
+
+permissions: {}
+
+jobs:
+  discover:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: busca até a cota acabar
+        env:
+          ADMIN_TOKEN: ${{ secrets.ADMIN_TOKEN }}
+          API: https://apiwannawatch.jotave.dev
+        run: |
+          # 20 títulos por chamada (o máximo do endpoint), para cada uma caber nos 100 s do Cloudflare.
+          # Cada busca gasta 100 das 10.000 unidades do dia, então umas 5 rodadas esgotam a cota;
+          # o limite de 15 é só uma trava.
+          total_titles=0; total_found=0; total_skipped=0; reason="limite de rodadas"
+          for round in $(seq 1 15); do
+            res=$(curl -sS --fail-with-body --max-time 95 --retry 2 --retry-delay 20 \
+              -X POST "$API/api/admin/videos/discover/auto" \
+              -H "X-Admin-Token: $ADMIN_TOKEN" -H 'Content-Type: application/json' \
+              -d '{"limit":20}') || { echo "::error::rodada $round falhou: $res"; exit 1; }
+            echo "rodada $round: $res"
+            searched=$(jq -r '.titlesSearched' <<<"$res")
+            total_titles=$((total_titles + searched))
+            total_found=$((total_found + $(jq -r '.videosFound' <<<"$res")))
+            total_skipped=$((total_skipped + $(jq -r '.horizontalSkipped' <<<"$res")))
+            if [ "$(jq -r '.quotaExceeded' <<<"$res")" = true ]; then reason="cota do YouTube acabou"; break; fi
+            error=$(jq -r '.error // empty' <<<"$res")
+            if [ -n "$error" ]; then echo "::error::$error"; exit 1; fi
+            if [ "$searched" -eq 0 ]; then reason="não sobrou título para buscar"; break; fi
+          done
+          {
+            echo "### Vídeos do Reels"
+            echo "- Títulos buscados: $total_titles"
+            echo "- Vídeos verticais novos (PENDING): $total_found"
+            echo "- Horizontais descartados: $total_skipped"
+            echo "- Parou porque: $reason"
+            echo ""
+            echo "Revisão: https://wannawatch.jotave.dev/admin/videos"
+          } >> "$GITHUB_STEP_SUMMARY"

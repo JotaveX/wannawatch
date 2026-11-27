@@ -363,4 +363,6 @@ export interface DiscoverResult {
   horizontalSkipped: number;
   /** preenchido quando a rodada parou no meio (ex.: cota do YouTube acabou) */
   error: string | null;
+  /** a rodada parou porque a cota diária do YouTube acabou */
+  quotaExceeded: boolean;
 }

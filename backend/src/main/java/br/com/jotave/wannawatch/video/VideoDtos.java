@@ -39,8 +39,10 @@ public final class VideoDtos {
      * @param videosFound        vídeos verticais guardados
      * @param horizontalSkipped  vídeos que a busca trouxe mas eram horizontais (descartados)
      * @param error              preenchido quando a rodada parou no meio (ex.: cota acabou)
+     * @param quotaExceeded      a rodada parou porque a cota diária do YouTube acabou
      */
-    public record DiscoverResult(int titlesSearched, int videosFound, int horizontalSkipped, String error) {}
+    public record DiscoverResult(int titlesSearched, int videosFound, int horizontalSkipped, String error,
+                                 boolean quotaExceeded) {}
 
     public record StatusRequest(VideoStatus status) {}
 
