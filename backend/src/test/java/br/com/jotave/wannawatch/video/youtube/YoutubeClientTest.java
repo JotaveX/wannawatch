@@ -86,6 +86,15 @@ class YoutubeClientTest {
     }
 
     @Test
+    void trata429ComoFimDaCota() {
+        server.expect(once(), requestTo(Matchers.startsWith("https://yt.test/v3/search")))
+                .andRespond(withStatus(HttpStatus.TOO_MANY_REQUESTS));
+
+        assertThatThrownBy(() -> client.searchShortVideos("Duna trailer"))
+                .isInstanceOfSatisfying(YoutubeException.class, e -> assertThat(e.quotaExceeded()).isTrue());
+    }
+
+    @Test
     void semChaveNaoChamaAApi() {
         YoutubeClient semChave = new YoutubeClient(RestClient.builder(),
                 new YoutubeProperties("https://yt.test/v3", "", "BR", "pt", 5));

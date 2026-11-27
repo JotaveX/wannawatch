@@ -98,7 +98,9 @@ public class YoutubeClient {
             return request.get();
         } catch (RestClientResponseException e) {
             int status = e.getStatusCode().value();
-            boolean quota = status == 403 && e.getResponseBodyAsString().contains("quotaExceeded");
+            // a cota estourada vem como 403 quotaExceeded, mas no fim do dia às vezes chega como 429
+            boolean quota = status == 429
+                    || (status == 403 && e.getResponseBodyAsString().contains("quotaExceeded"));
             String message = quota
                     ? "A cota diária da API do YouTube acabou. Ela volta à meia-noite (horário do Pacífico)."
                     : "A API do YouTube respondeu " + status + ".";
