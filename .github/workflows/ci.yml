@@ -117,4 +117,11 @@ jobs:
           printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
           # A chave só pode rodar /opt/wannawatch/deploy.sh (command= no authorized_keys da VPS); o token do job
           # (leitura do GHCR, expira com o job) vai pela entrada padrão para o pull da imagem.
-          printf '%s' "$GHCR_TOKEN" | ssh -i ~/.ssh/deploy -o BatchMode=yes "$TARGET"
+          # A rede entre o runner e a Hostinger às vezes não conecta (timeout antes de chegar no sshd): tenta de
+          # novo, o deploy.sh pode rodar mais de uma vez sem problema.
+          for try in 1 2 3 4 5; do
+            printf '%s' "$GHCR_TOKEN" | ssh -i ~/.ssh/deploy -o BatchMode=yes -o ConnectTimeout=20 "$TARGET" && exit 0
+            echo "::warning::tentativa $try falhou, de novo em 30 s"
+            sleep 30
+          done
+          exit 1

@@ -8,7 +8,9 @@ WORKDIR /src
 # Dependências numa camada própria: só baixam de novo quando o pom muda.
 COPY mvnw pom.xml ./
 COPY .mvn .mvn
-RUN --mount=type=cache,target=/root/.m2 ./mvnw -q -B dependency:go-offline
+# O download do Maven pelo wrapper falha de vez em quando no CI: uma segunda tentativa resolve.
+RUN --mount=type=cache,target=/root/.m2 ./mvnw -q -B dependency:go-offline \
+    || (sleep 10 && ./mvnw -q -B dependency:go-offline)
 COPY src src
 RUN --mount=type=cache,target=/root/.m2 ./mvnw -q -B package -DskipTests \
     && mv target/wannawatch-*.jar /app.jar \
