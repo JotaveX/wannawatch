@@ -33,6 +33,11 @@ npm run build
 npx prettier --write <files>                                # printWidth 100, single quotes
 ```
 
+**Deploy** (README, "Deploy"): push on `main` → `.github/workflows/ci.yml` runs both test suites, then
+`wrangler deploy` of `frontend/` (wannawatch.jotave.dev) and the GHCR image + SSH `deploy.sh` on the VPS
+(`/opt/wannawatch`, copies of `deploy/`; API at apiwannawatch.jotave.dev via Cloudflare Tunnel). Changing
+`deploy/compose.yml` needs a manual `scp` to the VPS.
+
 Swagger: `http://localhost:8081/swagger-ui.html`. Component showcase (dev only): `/dev/componentes`.
 
 ## Backend architecture (`br.com.jotave.wannawatch`)

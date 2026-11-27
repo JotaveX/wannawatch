@@ -1,0 +1,14 @@
+// Front em produção: Worker só com arquivos estáticos (o build do Angular) em https://wannawatch.jotave.dev.
+// Deploy: `npm run build && npx wrangler deploy` (o CI faz isso a cada push na main).
+{
+  "name": "wannawatch",
+  "compatibility_date": "2026-11-01",
+  "assets": {
+    "directory": "./dist/frontend/browser",
+    // Rotas do Angular (/swipe, /titulo/…) caem no index.html.
+    "not_found_handling": "single-page-application"
+  },
+  "routes": [{ "pattern": "wannawatch.jotave.dev", "custom_domain": true }],
+  "workers_dev": false,
+  "observability": { "enabled": true }
+}

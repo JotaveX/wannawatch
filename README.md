@@ -142,7 +142,8 @@ npm start          # http://localhost:4200
 npm test -- --watch=false
 ```
 
-- A URL da API fica em `src/environments/` (dev: `http://localhost:8081/api`).
+- A URL da API fica em `src/environments/` (dev: `http://localhost:8081/api`, produção:
+  `https://apiwannawatch.jotave.dev/api`).
 - Vitrine dos componentes (só em dev): <http://localhost:4200/dev/componentes>.
 
 Organização (`src/app`):
@@ -157,6 +158,40 @@ Organização (`src/app`):
 | `features` | Uma pasta por tela |
 | `src/styles` | Design tokens (`tokens.css`) e estilos base |
 | `src/testing` | Dados de exemplo para os testes |
+
+## Deploy
+
+| O quê | Onde |
+|---|---|
+| Front | <https://wannawatch.jotave.dev>: Worker só com arquivos estáticos na Cloudflare (`frontend/wrangler.jsonc`) |
+| API | <https://apiwannawatch.jotave.dev>: VPS (Hostinger), Docker, exposta pelo Cloudflare Tunnel `wannawatch-vps` |
+| Banco | Postgres 18 no Docker da mesma VPS (volume `wannawatch_pgdata`), sem porta aberta |
+| Fotos | Bucket `wannawatch` no R2, público em <https://r2wannawatch.jotave.dev> |
+
+**Automático:** `.github/workflows/ci.yml` roda os testes do back e do front em todo push e PR.
+Num push na `main` com os testes verdes, publica o front (`wrangler deploy`), monta a imagem
+`ghcr.io/jotavex/wannawatch-api` e atualiza a VPS. Segredos do repositório: `CLOUDFLARE_API_TOKEN`
+(modelo "Edit Cloudflare Workers"), `CLOUDFLARE_ACCOUNT_ID`, `DEPLOY_SSH_KEY`, `DEPLOY_KNOWN_HOSTS` e
+`DEPLOY_TARGET` (`root@<ip>`).
+
+**Na VPS** (`/opt/wannawatch`): `compose.yml` e `deploy.sh` são cópias de `deploy/` (mudou um deles,
+copie de novo com `scp`); os segredos ficam em `.env` (chmod 600, modelo em `deploy/.env.example`).
+A chave SSH do CI só pode rodar o `deploy.sh` (`command="/opt/wannawatch/deploy.sh",restrict` no
+`authorized_keys`); o token temporário do job chega pela entrada padrão para o `docker compose pull`.
+As migrações rodam na subida da API e o catálogo é importado sozinho na primeira vez.
+
+```bash
+ssh root@<ip>
+cd /opt/wannawatch
+docker compose ps
+docker compose logs -f api
+./deploy.sh < /dev/null                                          # sobe de novo sem baixar imagem
+docker compose exec db psql -U wannawatch                        # SQL no banco de produção
+```
+
+Os usuários de exemplo da V4 (`jotave`, `bia`, `caio`) existem em produção com senha aleatória, então
+ninguém entra com eles. O administrador também não vem da migração: depois de criar a conta,
+`UPDATE app_user SET is_admin = TRUE WHERE username = '<você>';`.
 
 ## Importação da TMDB
 
