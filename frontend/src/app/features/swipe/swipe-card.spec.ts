@@ -25,7 +25,9 @@ describe('dragDecision', () => {
 
 describe('SwipeCard', () => {
   beforeEach(() =>
-    TestBed.configureTestingModule({ providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting()] }),
+    TestBed.configureTestingModule({
+      providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting()],
+    }),
   );
 
   async function render(interactive = true, over: Partial<TitleCard> = {}) {
@@ -43,23 +45,46 @@ describe('SwipeCard', () => {
     const el = (await render()).nativeElement as HTMLElement;
     expect(el.querySelector('h2')?.textContent).toBe('Noite em Marte');
     expect(el.querySelector('.badge')?.textContent?.trim()).toBe('Bia curtiu');
-    expect(el.querySelector('a[aria-label="Mais informações sobre Noite em Marte"]')?.getAttribute('href')).toBe('/filme/7');
+    expect(
+      el
+        .querySelector('a[aria-label="Mais informações sobre Noite em Marte"]')
+        ?.getAttribute('href'),
+    ).toBe('/filme/7');
   });
 
-  it('sem amigos, o selo é o motivo da recomendação e descreve a carta', async () => {
-    const el = (await render(true, { reason: { kind: 'BECAUSE_LIKED', text: 'Porque você curtiu Dark' } }))
-      .nativeElement as HTMLElement;
-    const badge = el.querySelector('.badge')!;
-    expect(badge.textContent?.trim()).toBe('Porque você curtiu Dark');
-    expect(el.querySelector('article')?.getAttribute('aria-describedby')).toBe(badge.id);
+  it('com motivo liberado, mostra o balão e ele descreve a carta', async () => {
+    const fixture = await render(true, {
+      reason: { kind: 'BECAUSE_LIKED', text: 'Porque você curtiu Dark' },
+    });
+    fixture.componentRef.setInput('showReason', true);
+    await fixture.whenStable();
+    const el = fixture.nativeElement as HTMLElement;
+    const reason = el.querySelector('.reason')!;
+    expect(reason.textContent).toContain('Porque você curtiu Dark');
+    expect(el.querySelector('.badge')).toBeNull();
+    expect(el.querySelector('article')?.getAttribute('aria-describedby')).toBe(reason.id);
   });
 
-  it('quem curtiu tem prioridade sobre o motivo', async () => {
+  it('sem liberação da página (ou na carta de trás), sem balão', async () => {
+    const r = { kind: 'GENRE' as const, text: 'Você curte terror' };
+    expect((await render(true, { reason: r })).nativeElement.querySelector('.reason')).toBeNull();
+    const back = await render(false, { reason: r });
+    back.componentRef.setInput('showReason', true);
+    await back.whenStable();
+    expect(back.nativeElement.querySelector('.reason')).toBeNull();
+  });
+
+  it('quem curtiu fica no selo e o motivo no balão', async () => {
     TestBed.inject(LikesStore).remember([
       { titleId: 7, likedByMe: false, friends: [{ id: 2, username: 'bia', displayName: 'Bia' }] },
     ]);
-    const el = (await render(true, { reason: { kind: 'POPULAR', text: 'Em alta' } })).nativeElement as HTMLElement;
+    const fixture = await render(true, { reason: { kind: 'PERSON', text: 'Com Pedro Pascal' } });
+    fixture.componentRef.setInput('showReason', true);
+    await fixture.whenStable();
+    const el = fixture.nativeElement as HTMLElement;
     expect(el.querySelector('.badge')?.textContent?.trim()).toBe('Bia curtiu');
+    expect(el.querySelector('.reason')?.textContent).toContain('Com Pedro Pascal');
+    expect(el.querySelector('article')?.getAttribute('aria-describedby')).toBe('badge-7 reason-7');
   });
 
   it('sem curtidas de amigos, sem selo', async () => {

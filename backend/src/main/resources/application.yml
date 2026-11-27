@@ -192,6 +192,7 @@ wannawatch:
       reels-score: 0.6              # ordem do Reels = 0.6·score + 0.4·popularidade
       reels-popularity: 0.4
       reels-video-boost: 0.15       # + 0.15 para quem tem vídeo aprovado (também sem login)
+      swipe-reason-percentile: 0.9  # o Swipe só diz o porquê dos 10% do deck que mais combinam
     # deck do Match: média dos percentis − λ·desvio, sem miséria
     group:
       lambda: 0.5

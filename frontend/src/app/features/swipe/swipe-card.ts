@@ -65,17 +65,42 @@ const OUT: Record<Decision, [number, number, number]> = {
     '(dragstart)': '$event.preventDefault()',
   },
   template: `
-    <article [attr.aria-labelledby]="'card-' + card().id" [attr.aria-describedby]="badge() ? 'badge-' + card().id : null"
-             [attr.aria-hidden]="interactive() ? null : true">
+    <article
+      [attr.aria-labelledby]="'card-' + card().id"
+      [attr.aria-describedby]="describedBy()"
+      [attr.aria-hidden]="interactive() ? null : true"
+    >
       <div class="media">
-        <ww-poster ratio="fill" [image]="card().poster" [widths]="[342, 780]" sizes="420px"
-                   [seed]="card().id" [title]="card().title" [eager]="true" />
+        <ww-poster
+          ratio="fill"
+          [image]="card().poster"
+          [widths]="[342, 780]"
+          sizes="420px"
+          [seed]="card().id"
+          [title]="card().title"
+          [eager]="true"
+        />
         @if (badge(); as badge) {
           <span class="badge" [id]="'badge-' + card().id">{{ badge }}</span>
         }
+        @if (reason(); as reason) {
+          <span class="reason" [class.away]="dragging() || leaving()" [id]="'reason-' + card().id">
+            <span class="burst" aria-hidden="true">
+              @for (i of sparks; track i) {
+                <i [style.--a]="i * 45 + 'deg'"></i>
+              }
+            </span>
+            <span class="pill"><span aria-hidden="true">✦</span> {{ reason }}</span>
+          </span>
+        }
         @if (interactive()) {
-          <a wwIconButton variant="light" class="info" [routerLink]="link()"
-             [label]="'Mais informações sobre ' + card().title">
+          <a
+            wwIconButton
+            variant="light"
+            class="info"
+            [routerLink]="link()"
+            [label]="'Mais informações sobre ' + card().title"
+          >
             <ww-icon name="info" />
           </a>
         }
@@ -101,13 +126,27 @@ export class SwipeCard {
   readonly interactive = input(false);
   /** false = só esquerda/direita (no Match não tem "talvez" nem "já vi") */
   readonly vertical = input(true);
+  /** a página decide se o motivo aparece (não nas primeiras cartas da sessão) */
+  readonly showReason = input(false);
   readonly decided = output<Decision>();
 
   private readonly likes = inject(LikesStore);
-  /** "Bia curtiu" tem prioridade; senão, o motivo da recomendação ("Porque você curtiu Dark") */
-  protected readonly badge = computed(
-    () => likedByLabel(this.likes.friends(this.card().id)) ?? this.card().reason?.text ?? null,
+  /** selo fixo: quem curtiu ("Bia curtiu") */
+  protected readonly badge = computed(() => likedByLabel(this.likes.friends(this.card().id)));
+  /**
+   * Balão do porquê. O back só manda motivo para os títulos que mais combinam com a pessoa,
+   * então ele aparece de vez em quando — e só na carta de cima.
+   */
+  protected readonly reason = computed(() =>
+    this.interactive() && this.showReason() ? (this.card().reason?.text ?? null) : null,
   );
+  protected readonly describedBy = computed(
+    () =>
+      [this.badge() && 'badge-' + this.card().id, this.reason() && 'reason-' + this.card().id]
+        .filter(Boolean)
+        .join(' ') || null,
+  );
+  protected readonly sparks = [0, 1, 2, 3, 4, 5, 6, 7];
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
 
   protected readonly dx = signal(0);

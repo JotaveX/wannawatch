@@ -4,6 +4,7 @@ import br.com.jotave.wannawatch.feedback.SignalChangedEvent;
 import br.com.jotave.wannawatch.recommendation.domain.DiversityReranker;
 import br.com.jotave.wannawatch.recommendation.domain.Exclusion;
 import br.com.jotave.wannawatch.recommendation.domain.Reason;
+import br.com.jotave.wannawatch.recommendation.domain.ReasonKind;
 import br.com.jotave.wannawatch.recommendation.domain.ReasonResolver;
 import br.com.jotave.wannawatch.recommendation.domain.Scorer;
 import br.com.jotave.wannawatch.recommendation.domain.TasteProfile;
@@ -98,6 +99,27 @@ public class RecommendationService {
         for (long id : titleIds) {
             Reason r = reason(userId, id);
             if (r != null) out.put(id, r);
+        }
+        return out;
+    }
+
+    /**
+     * Motivos só dos títulos que mais combinam com a pessoa: score entre os {@code 1 − minPercentile}
+     * melhores do {@code deck} e motivo pessoal (sem "Em alta" / "Bem avaliado"). É o que o Swipe
+     * mostra, para o balão não virar ruído em toda carta.
+     */
+    public Map<Long, Reason> strongReasons(long userId, Collection<Long> titleIds, Collection<Long> deck,
+                                           double minPercentile) {
+        UserScores scores = scores(userId);
+        double[] sorted = deck.stream().mapToDouble(scores::score).sorted().toArray();
+        if (sorted.length == 0) return Map.of();
+        int at = Math.clamp((long) Math.ceil(minPercentile * sorted.length) - 1, 0, sorted.length - 1);
+        double cutoff = sorted[at];
+        Map<Long, Reason> out = new java.util.HashMap<>();
+        for (long id : titleIds) {
+            if (scores.score(id) < cutoff) continue;
+            Reason r = reason(userId, id);
+            if (r != null && r.kind() != ReasonKind.POPULAR) out.put(id, r);
         }
         return out;
     }

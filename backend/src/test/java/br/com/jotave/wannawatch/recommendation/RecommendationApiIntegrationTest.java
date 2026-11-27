@@ -201,10 +201,18 @@ class RecommendationApiIntegrationTest {
         }
 
         @Test
-        void cartaVemComOMotivo() throws Exception {
-            for (long id : List.of(s1, s2, s3)) like(jotave, id);
-            mvc.perform(get("/api/swipe/deck").param("seed", "c").header("Authorization", "Bearer " + jotave))
-                    .andExpect(jsonPath("$.items[*].reason.text", everyItem(notNullValue())));
+        void soOsQueMaisCombinamVemComMotivoPessoal() throws Exception {
+            // 5 curtidas: sai do cold start (antes disso o topo é só popularidade, sem motivo pessoal)
+            for (long id : List.of(s1, s2, s3, s4, s5)) like(jotave, id);
+            String body = mvc.perform(get("/api/swipe/deck").param("seed", "c").param("size", "20")
+                            .header("Authorization", "Bearer " + jotave))
+                    .andReturn().getResponse().getContentAsString();
+            List<String> kinds = JsonPath.read(body, "$.items[*].reason.kind");
+            List<Object> items = JsonPath.read(body, "$.items");
+
+            // percentil ≥ 0,9 do deck (9 títulos): só o do topo tem motivo, e nunca "Em alta"
+            assertThat(items).hasSize(9);
+            assertThat(kinds).hasSize(1).doesNotContain("POPULAR");
         }
 
         @Test

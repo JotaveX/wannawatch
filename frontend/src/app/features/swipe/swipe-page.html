@@ -42,6 +42,7 @@
             <ww-swipe-card
               [card]="card"
               [interactive]="$last"
+              [showReason]="reasonAllowed()"
               (decided)="store.decide($event)"
             />
           }

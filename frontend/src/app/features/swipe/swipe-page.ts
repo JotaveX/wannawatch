@@ -21,6 +21,9 @@ const KEYS: Record<string, Decision | 'undo'> = {
   Backspace: 'undo',
 };
 
+/** quantas cartas passam antes do primeiro balão de motivo */
+export const REASON_AFTER = 3;
+
 const LAST_TEXT: Record<Decision, string> = {
   pass: 'Passou',
   maybe: 'Talvez:',
@@ -55,15 +58,21 @@ export class SwipePage {
 
   protected readonly currentLikedBy = computed(() => {
     const c = this.store.current();
-    return c ? (likedByLabel(this.likes.friends(c.id)) ?? c.reason?.text ?? null) : null;
+    return c ? likedByLabel(this.likes.friends(c.id)) : null;
   });
+
+  /** o balão do porquê fica de fora das primeiras cartas da sessão */
+  protected readonly reasonAllowed = computed(() => this.store.index() >= REASON_AFTER);
 
   protected readonly currentFacts = computed(() => {
     const c = this.store.current();
     if (!c) return [];
-    return [typeLabel(c), c.year ? String(c.year) : null, length(c), c.ageRating ? `Classificação ${c.ageRating}` : null].filter(
-      (p): p is string => !!p,
-    );
+    return [
+      typeLabel(c),
+      c.year ? String(c.year) : null,
+      length(c),
+      c.ageRating ? `Classificação ${c.ageRating}` : null,
+    ].filter((p): p is string => !!p);
   });
   protected readonly titleLink = titleLink;
 
@@ -87,7 +96,11 @@ export class SwipePage {
   protected onKey(event: KeyboardEvent): void {
     if (event.altKey || event.ctrlKey || event.metaKey) return;
     const target = event.target;
-    if (target instanceof Element && target.closest('input, textarea, select, [contenteditable="true"]')) return;
+    if (
+      target instanceof Element &&
+      target.closest('input, textarea, select, [contenteditable="true"]')
+    )
+      return;
     const action = KEYS[event.key];
     if (!action) return;
     event.preventDefault();

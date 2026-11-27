@@ -9,6 +9,7 @@ import br.com.jotave.wannawatch.recommendation.application.FeedSnapshots;
 import br.com.jotave.wannawatch.recommendation.application.PersonalizedFeeds;
 import br.com.jotave.wannawatch.recommendation.application.RecommendationProperties;
 import br.com.jotave.wannawatch.recommendation.application.RecommendationService;
+import br.com.jotave.wannawatch.recommendation.domain.Reason;
 import br.com.jotave.wannawatch.shared.web.BadRequestException;
 import br.com.jotave.wannawatch.shared.web.Cursor;
 import br.com.jotave.wannawatch.shared.web.CursorResponse;
@@ -16,6 +17,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.BiFunction;
 import java.util.function.Supplier;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Service;
@@ -61,8 +63,9 @@ public class FeedService {
         CursorResponse<TitleCard> page;
         if (user.isPresent()) {
             long me = user.get().id();
-            page = fromSnapshot(me, FeedSnapshots.key(me, "reels", "", type, genre), cursor, size,
-                    () -> personalized.reelsOrder(me, candidates(type, genre), videos.titlesWithVideo()));
+            page = fromSnapshot(FeedSnapshots.key(me, "reels", "", type, genre), cursor, size,
+                    () -> personalized.reelsOrder(me, candidates(type, genre), videos.titlesWithVideo()),
+                    (shown, deck) -> recommendations.reasons(me, shown));
         } else {
             page = reels(cursor, size, type, genre);
         }
@@ -75,8 +78,9 @@ public class FeedService {
                                                MediaType type, String genre) {
         if (user.isPresent()) {
             long me = user.get().id();
-            return fromSnapshot(me, FeedSnapshots.key(me, "swipe", seed, type, genre), cursor, size,
-                    () -> personalized.swipeOrder(me, candidates(type, genre), seed));
+            return fromSnapshot(FeedSnapshots.key(me, "swipe", seed, type, genre), cursor, size,
+                    () -> personalized.swipeOrder(me, candidates(type, genre), seed),
+                    (shown, deck) -> recommendations.strongReasons(me, shown, deck, props.feed().swipeReasonPercentile()));
         }
         return swipeDeck(seed, cursor, size, type, genre);
     }
@@ -85,8 +89,9 @@ public class FeedService {
      * Página de um feed personalizado. Primeira página (ou snapshot expirado): calcula a ordem e
      * guarda. O cursor é "p&lt;posição&gt;" no formato de sempre do {@link Cursor}.
      */
-    private CursorResponse<TitleCard> fromSnapshot(long userId, String key, String cursor, int size,
-                                                   Supplier<List<Long>> order) {
+    private CursorResponse<TitleCard> fromSnapshot(String key, String cursor, int size,
+                                                   Supplier<List<Long>> order,
+                                                   BiFunction<List<Long>, List<Long>, Map<Long, Reason>> reasons) {
         Cursor after = Cursor.decode(cursor);
         int from = 0;
         List<Long> ids = null;
@@ -100,7 +105,7 @@ public class FeedService {
         int to = Math.min(ids.size(), from + size);
         List<Long> page = ids.subList(from, to);
         String next = to < ids.size() ? new Cursor("p" + to, page.getLast()).encode() : null;
-        return new CursorResponse<>(cards.load(page, recommendations.reasons(userId, page)), next);
+        return new CursorResponse<>(cards.load(page, reasons.apply(page, ids)), next);
     }
 
     private static int position(Cursor cursor) {

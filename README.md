@@ -429,7 +429,10 @@ Onde entra:
   curtiram" e "Filmes aclamados" não mudam.
 - **Swipe**: não mostra o que você já avaliou ("talvez" volta depois de 7 dias). A ordem é o score
   com uma variação por visita (a seed), e a cada 5 cartas uma é de exploração: bem avaliada, de um
-  gênero que você quase não curte.
+  gênero que você quase não curte. O motivo não vem em toda carta: só nos 10% do deck com maior
+  score e quando é pessoal (nunca "Em alta"/"Bem avaliado"), e as 3 primeiras cartas da sessão
+  ficam sem. Ele aparece num balão que estoura com confete e fica flutuando no pôster; o "Fulano
+  curtiu" continua no selo fixo.
 - **Reels**: tira o que você já viu ou passou, deixa os curtidos no fim e ordena por
   `0,6·score + 0,4·popularidade + 0,15` (o `+ 0,15` só para quem tem vídeo aprovado). Sem login,
   a ordem é `0,4·popularidade + 0,15 se tiver vídeo`.
