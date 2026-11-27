@@ -64,7 +64,7 @@ class SocialApiIntegrationTest {
         // volta os perfis ao que a migration deixou
         jdbc.sql("""
                 UPDATE app_user SET display_name = initcap(username), color = (id - 1) % 5, mascot = NULL,
-                       favorite_genre_id = NULL, favorite_title_id = NULL""").update();
+                       favorite_genre_id = NULL, favorite_title_id = NULL, photo_key = NULL, photo_url = NULL""").update();
         long drama = genre(18, "Drama", "drama");
         long comedy = genre(35, "Comédia", "comedia");
         m1 = title(1, "MOVIE", "Filme Um", drama);

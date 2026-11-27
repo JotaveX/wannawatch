@@ -10,3 +10,10 @@ wannawatch:
     on-startup-if-empty: false
     cron: "-"
     admin-token: test-admin
+  # fotos de perfil sempre em disco nos testes, nunca no R2 de verdade
+  photos:
+    r2:
+      access-key-id: ""
+    local:
+      dir: target/test-photos
+      public-url: http://localhost/fotos

@@ -9,12 +9,12 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { catchError, map, of } from 'rxjs';
+import { catchError, map, Observable, of, switchMap } from 'rxjs';
 import { CatalogApi } from '../../core/api/catalog-api';
 import { Profile, TitleCard, UserRef } from '../../core/api/models';
 import { SocialApi } from '../../core/api/social-api';
 import { AuthStore } from '../../core/auth/auth-store';
-import { PhotoError, PhotoStore } from '../../core/social/photo-store';
+import { PhotoError, preparePhoto } from '../../core/social/photo-file';
 import { USER_COLORS } from '../../core/social/user-colors';
 import { Avatar } from '../../shared/ui/avatar';
 import { Button } from '../../shared/ui/button';
@@ -42,7 +42,6 @@ export class SettingsPage {
   private readonly api = inject(SocialApi);
   private readonly catalog = inject(CatalogApi);
   private readonly auth = inject(AuthStore);
-  private readonly photos = inject(PhotoStore);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
   private readonly destroyRef = inject(DestroyRef);
@@ -59,7 +58,10 @@ export class SettingsPage {
   protected readonly name = signal('');
   protected readonly color = signal(0);
   protected readonly avatar = signal<AvatarChoice>('initials');
+  /** o que aparece no quadradinho da foto: a URL salva ou a prévia da que acabou de escolher */
   protected readonly photo = signal<string | null>(null);
+  /** foto escolhida e ainda não enviada (vai no "Salvar") */
+  private readonly pendingPhoto = signal<Blob | null>(null);
   protected readonly genreId = signal<number | null>(null);
   protected readonly favorite = signal<TitleCard | null>(null);
 
@@ -93,7 +95,7 @@ export class SettingsPage {
   );
 
   private readonly cleanName = computed(() => this.name().trim().replace(/\s+/g, ' '));
-  /** Com foto, o Bu salvo continua valendo para os amigos (a foto ainda é só deste aparelho). */
+  /** Com foto, o Bu salvo fica guardado: volta a valer se a pessoa tirar a foto. */
   private readonly mascotToSave = computed(() => {
     const a = this.avatar();
     return typeof a === 'number' ? a : a === 'photo' ? (this.profile()?.user.mascot ?? null) : null;
@@ -106,12 +108,11 @@ export class SettingsPage {
   protected readonly dirty = computed(() => {
     const p = this.profile();
     if (!p) return false;
-    const savedPhoto = this.photos.photo(p.user.id);
     return (
       this.cleanName() !== p.user.displayName ||
       this.color() !== (p.user.color ?? 0) ||
-      this.avatar() !== initialAvatar(p.user, savedPhoto) ||
-      (this.avatar() === 'photo' && this.photo() !== savedPhoto) ||
+      this.avatar() !== initialAvatar(p.user) ||
+      (this.avatar() === 'photo' && this.pendingPhoto() !== null) ||
       this.genreId() !== (p.favoriteGenre?.id ?? null) ||
       this.favorite()?.id !== p.favoriteTitle?.id
     );
@@ -135,12 +136,12 @@ export class SettingsPage {
   /** Volta o rascunho para o que está salvo. */
   protected reset(p = this.profile()): void {
     if (!p) return;
-    const savedPhoto = this.photos.photo(p.user.id);
     this.profile.set(p);
     this.name.set(p.user.displayName);
     this.color.set(p.user.color ?? 0);
-    this.avatar.set(initialAvatar(p.user, savedPhoto));
-    this.photo.set(savedPhoto);
+    this.avatar.set(initialAvatar(p.user));
+    this.photo.set(p.user.photoUrl ?? null);
+    this.pendingPhoto.set(null);
     this.genreId.set(p.favoriteGenre?.id ?? null);
     this.favorite.set(p.favoriteTitle);
     this.photoError.set(null);
@@ -150,7 +151,7 @@ export class SettingsPage {
     this.genreId.set(value ? Number(value) : null);
   }
 
-  // --- foto (mock) ---
+  // --- foto ---
 
   protected async pickPhoto(input: HTMLInputElement): Promise<void> {
     const file = input.files?.[0];
@@ -158,7 +159,9 @@ export class SettingsPage {
     if (!file) return;
     this.photoError.set(null);
     try {
-      this.photo.set(await this.photos.prepare(file));
+      const prepared = await preparePhoto(file);
+      this.photo.set(prepared.preview);
+      this.pendingPhoto.set(prepared.blob);
       this.avatar.set('photo');
     } catch (e) {
       this.photoError.set(e instanceof PhotoError ? e.message : 'Não deu pra usar essa imagem.');
@@ -181,10 +184,12 @@ export class SettingsPage {
         favoriteGenreId: this.genreId(),
         favoriteTitleId: this.favorite()?.id ?? null,
       })
-      .pipe(takeUntilDestroyed(this.destroyRef))
+      .pipe(
+        switchMap((saved) => this.savePhoto(saved)),
+        takeUntilDestroyed(this.destroyRef),
+      )
       .subscribe({
         next: (saved) => {
-          this.photos.save(saved.user.id, this.avatar() === 'photo' ? this.photo() : null);
           this.auth.updateUser(saved.user);
           this.reset(saved);
           this.saving.set(false);
@@ -201,13 +206,21 @@ export class SettingsPage {
       });
   }
 
+  /** Depois do resto do perfil: envia a foto nova, ou apaga a salva se trocou por Bu/iniciais. */
+  private savePhoto(saved: Profile): Observable<Profile> {
+    const pending = this.pendingPhoto();
+    if (this.avatar() === 'photo' && pending) return this.api.uploadPhoto(pending);
+    if (this.avatar() !== 'photo' && saved.user.photoUrl) return this.api.removePhoto();
+    return of(saved);
+  }
+
   protected logout(): void {
     this.auth.logout();
     this.router.navigate(['/entrar']);
   }
 }
 
-function initialAvatar(user: UserRef, savedPhoto: string | null): AvatarChoice {
-  if (savedPhoto) return 'photo';
+function initialAvatar(user: UserRef): AvatarChoice {
+  if (user.photoUrl) return 'photo';
   return user.mascot ?? 'initials';
 }

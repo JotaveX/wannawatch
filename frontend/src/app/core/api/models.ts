@@ -177,6 +177,8 @@ export interface UserRef {
   color?: number;
   /** índice de BU_MASCOTS (shared/ui/mascots.ts) usado como avatar; null = iniciais */
   mascot?: number | null;
+  /** foto de perfil enviada (R2 em produção); null = vale o Bu ou as iniciais */
+  photoUrl?: string | null;
 }
 
 export interface ProfileStats {

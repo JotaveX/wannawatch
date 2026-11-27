@@ -23,19 +23,26 @@ describe('SettingsPage', () => {
   beforeEach(() => {
     localStorage.setItem('ww.session', JSON.stringify({ token: 'tok', user }));
     TestBed.configureTestingModule({
-      providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting(), { provide: API_BASE_URL, useValue: '/api' }],
+      providers: [
+        provideRouter([]),
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: API_BASE_URL, useValue: '/api' },
+      ],
     });
     http = TestBed.inject(HttpTestingController);
   });
   afterEach(() => localStorage.clear());
 
-  async function render() {
+  async function render(saved: Profile = profile) {
     const fixture = TestBed.createComponent(SettingsPage);
     await fixture.whenStable();
-    http.expectOne((r) => r.url === '/api/genres').flush([
-      { id: 18, name: 'Drama', slug: 'drama', forMovie: true, forSeries: true, titleCount: 5 },
-    ]);
-    http.expectOne('/api/me/profile').flush(profile);
+    http
+      .expectOne((r) => r.url === '/api/genres')
+      .flush([
+        { id: 18, name: 'Drama', slug: 'drama', forMovie: true, forSeries: true, titleCount: 5 },
+      ]);
+    http.expectOne('/api/me/profile').flush(saved);
     await fixture.whenStable();
     const el = fixture.nativeElement as HTMLElement;
     const save = () => el.querySelector<HTMLButtonElement>('button[type="submit"]')!;
@@ -75,7 +82,10 @@ describe('SettingsPage', () => {
       favoriteGenreId: null,
       favoriteTitleId: null,
     });
-    const saved = { ...profile, user: { ...user, displayName: 'João Victor', color: 5, mascot: 2 } };
+    const saved = {
+      ...profile,
+      user: { ...user, displayName: 'João Victor', color: 5, mascot: 2 },
+    };
     req.flush(saved);
     await fixture.whenStable();
 
@@ -92,5 +102,47 @@ describe('SettingsPage', () => {
     await fixture.whenStable();
     expect(el.querySelector('#nome-erro')!.textContent).toContain('não pode ficar vazio');
     expect(save().disabled).toBe(true);
+  });
+
+  it('com foto salva, trocar pelas iniciais apaga a foto depois de salvar o perfil', async () => {
+    const photoUrl = 'https://fotos.exemplo/avatars/1/a.jpg';
+    const { fixture, el, save } = await render({ ...profile, user: { ...user, photoUrl } });
+    const options = el.querySelectorAll<HTMLInputElement>('input[name="avatar"]');
+    // 1 de iniciais + 8 poses do Bu + a foto
+    expect(options.length).toBe(10);
+    expect(el.querySelector<HTMLInputElement>('input[aria-label="Sua foto"]')!.checked).toBe(true);
+    expect(el.querySelector<HTMLImageElement>('.head img')!.src).toBe(photoUrl);
+
+    options[0].click(); // iniciais
+    await fixture.whenStable();
+    save().click();
+
+    const put = http.expectOne('/api/me/profile');
+    expect(put.request.method).toBe('PUT');
+    put.flush({ ...profile, user: { ...user, photoUrl } });
+    const del = http.expectOne('/api/me/profile/photo');
+    expect(del.request.method).toBe('DELETE');
+    del.flush({ ...profile, user: { ...user, photoUrl: null } });
+    await fixture.whenStable();
+
+    expect(TestBed.inject(AuthStore).user()?.photoUrl).toBeNull();
+    expect(el.textContent).toContain('Perfil salvo.');
+  });
+
+  it('sem mexer na foto, salvar não envia nem apaga nada', async () => {
+    const photoUrl = 'https://fotos.exemplo/avatars/1/a.jpg';
+    const { fixture, el, save } = await render({ ...profile, user: { ...user, photoUrl } });
+    const name = el.querySelector<HTMLInputElement>('#nome')!;
+    name.value = 'Jota';
+    name.dispatchEvent(new Event('input'));
+    await fixture.whenStable();
+    save().click();
+
+    http
+      .expectOne('/api/me/profile')
+      .flush({ ...profile, user: { ...user, displayName: 'Jota', photoUrl } });
+    await fixture.whenStable();
+    http.expectNone('/api/me/profile/photo');
+    expect(TestBed.inject(AuthStore).user()?.photoUrl).toBe(photoUrl);
   });
 });

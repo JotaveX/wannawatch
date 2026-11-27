@@ -12,7 +12,7 @@ commit messages are Brazilian Portuguese. Follow that.
 
 ## Commands
 
-Setup: `cp .env.example .env` (needs `TMDB_API_TOKEN`; `ADMIN_TOKEN` / `YOUTUBE_API_KEY` optional; `MAIL_*` default to Mailpit). The backend reads `../.env`
+Setup: `cp .env.example .env` (needs `TMDB_API_TOKEN`; `ADMIN_TOKEN` / `YOUTUBE_API_KEY` / `R2_*` optional; `MAIL_*` default to Mailpit). The backend reads `../.env`
 directly via `spring.config.import`, so it works from `backend/` without exporting variables.
 
 ```bash
@@ -57,6 +57,11 @@ Swagger: `http://localhost:8081/swagger-ui.html`. Component showcase (dev only):
   source `ONBOARDING`) → 6-digit e-mail code. Progress is `AccountStatus` (`app_user.titles_picked_at` /
   `email_verified_at`), returned as `account` by login/register and `GET /api/auth/account`. The code e-mail goes
   out after commit via `VerificationMailer` (SMTP; mocked with `@MockitoBean` in `SignupApiIntegrationTest`).
+- **Profile photos** (`profile/photo`): `PUT /api/me/profile/photo` (multipart) → `PhotoImages` re-encodes to a
+  192px square JPEG → `PhotoStorage`: `R2PhotoStorage` (Cloudflare R2 via AWS SDK v2 S3, public bucket at
+  `R2_PUBLIC_URL`) when `R2_ACCESS_KEY_ID` is set, else `LocalPhotoStorage` (`backend/data/photos`, served at `/fotos/**`;
+  also used in tests). New key per upload (`avatars/{id}/{uuid}.jpg`), old object deleted after the DB swap.
+  `app_user.photo_url` travels in every `UserRef` (`photoUrl`), so the front's `Avatar` just reads it.
 - **Errors**: throw `NotFoundException` / `BadRequestException` / `ConflictException` / `ForbiddenException` /
   `UnauthorizedException`; `ApiExceptionHandler` turns them into ProblemDetail.
 - **Pagination**: page-based lists use `PageResponse`; feeds (Swipe, Reels, Match deck) use `Cursor` +

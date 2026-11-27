@@ -1,3 +1,4 @@
+import { forgetLegacyPhotos } from './core/social/photo-file';
 import { DOCUMENT } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, effect, inject } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
@@ -42,6 +43,7 @@ export class App {
   constructor() {
     // a etapa do cadastro pode ter mudado em outro aparelho (ex.: confirmou o e-mail no celular)
     inject(AuthStore).refresh();
+    forgetLegacyPhotos();
     // O tema vai no <html> para o fundo da página inteira acompanhar.
     effect(() => {
       this.document.documentElement.dataset['theme'] = this.meta().theme;

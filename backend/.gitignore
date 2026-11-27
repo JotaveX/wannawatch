@@ -31,3 +31,6 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### Fotos de perfil salvas em disco no desenvolvimento ###
+data/

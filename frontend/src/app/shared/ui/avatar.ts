@@ -1,12 +1,11 @@
-import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 import { UserRef } from '../../core/api/models';
 import { initialsOf } from '../../core/auth/auth-store';
-import { PhotoStore } from '../../core/social/photo-store';
 import { userColors } from '../../core/social/user-colors';
 import { BU_MASCOTS } from './mascots';
 
 /**
- * Avatar de um usuário: a foto (se enviou neste aparelho), senão o Bu que escolheu sobre a
+ * Avatar de um usuário: a foto que enviou, senão o Bu que escolheu sobre a
  * cor dele, senão as iniciais na cor dele. `photo` força uma foto (prévia no perfil).
  * Decorativo: quem usa diz o nome por perto (texto ou aria-label).
  */
@@ -56,21 +55,19 @@ export class Avatar {
   /** prévia no perfil: undefined = a foto salva; null = sem foto; string = esta foto */
   readonly photo = input<string | null | undefined>(undefined);
 
-  private readonly photos = inject(PhotoStore);
   protected readonly initials = computed(() => initialsOf(this.user().displayName));
   protected readonly colors = computed(() => userColors(this.user()));
   private readonly mascot = computed(() => {
     const index = this.user().mascot;
     return index == null ? null : (BU_MASCOTS[index] ?? null);
   });
-  protected readonly image = computed(() => {
+  private readonly photoSrc = computed(() => {
     const preview = this.photo();
-    const photo = preview === undefined ? this.photos.photo(this.user().id) : preview;
-    return photo ?? this.mascot()?.avatar ?? null;
+    return preview === undefined ? (this.user().photoUrl ?? null) : preview;
   });
-  private readonly hasPhoto = computed(() => {
-    const preview = this.photo();
-    return !!(preview === undefined ? this.photos.photo(this.user().id) : preview);
-  });
-  protected readonly background = computed(() => (this.hasPhoto() ? 'transparent' : this.colors().bg));
+  protected readonly image = computed(() => this.photoSrc() ?? this.mascot()?.avatar ?? null);
+  private readonly hasPhoto = computed(() => !!this.photoSrc());
+  protected readonly background = computed(() =>
+    this.hasPhoto() ? 'transparent' : this.colors().bg,
+  );
 }

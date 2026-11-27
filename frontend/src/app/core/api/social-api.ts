@@ -83,6 +83,17 @@ export class SocialApi {
     return this.http.put<Profile>(`${this.base}/me/profile`, changes);
   }
 
+  /** Envia a foto de perfil (o back recorta em 192×192 e devolve o perfil com a `photoUrl`). */
+  uploadPhoto(photo: Blob): Observable<Profile> {
+    const form = new FormData();
+    form.append('file', photo, 'foto.jpg');
+    return this.http.put<Profile>(`${this.base}/me/profile/photo`, form);
+  }
+
+  removePhoto(): Observable<Profile> {
+    return this.http.delete<Profile>(`${this.base}/me/profile/photo`);
+  }
+
   // --- curtidas ---
 
   like(titleId: number, source?: InteractionSource): Observable<void> {

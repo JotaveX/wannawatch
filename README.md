@@ -47,6 +47,11 @@ O `.env` fica fora do git. Ele é lido pelo docker-compose e pelo back-end. Pree
   verificado lá (com `onboarding@resend.dev` só chega no e-mail do dono da conta).
 - `MAIL_*`: SMTP usado quando `RESEND_API_KEY` está vazia. O padrão é o Mailpit do docker-compose
   (nada sai de verdade; a caixa de entrada fica em <http://localhost:8025>).
+- `R2_*`: bucket do [Cloudflare R2](https://developers.cloudflare.com/r2/) para as fotos de perfil
+  (`R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID` e `R2_SECRET_ACCESS_KEY` de um token com "Object Read & Write",
+  `R2_BUCKET` e `R2_PUBLIC_URL`, o endereço público do bucket, `https://pub-….r2.dev` ou domínio
+  próprio). Vazias = as fotos ficam em `backend/data/photos` e o próprio back serve em
+  <http://localhost:8081/fotos>.
 
 Portas padrão (mude no `.env` se precisar):
 
@@ -99,6 +104,8 @@ Documentação interativa (Swagger): <http://localhost:8081/swagger-ui.html>
 | `POST /api/auth/register` | Cadastro, etapa 1: cria a conta já logada e manda o código por e-mail (201) |
 | `PUT /api/me/onboarding/titles` | Cadastro, etapa 2: `{ titleIds, favoriteTitleId? }`, de 5 a 50 títulos (viram "quero ver") |
 | `POST /api/auth/email/verify` · `POST /api/auth/email/resend` | Cadastro, etapa 3: confirma o código (`{ code }`) · manda outro (um por minuto) |
+| `GET`/`PUT /api/me/profile` · `GET /api/me/profile/activity` | Meu perfil (nome, cor, Bu, favoritos) · curtidas por semana e últimos curtidos |
+| `PUT`/`DELETE /api/me/profile/photo` | Envia (multipart, campo `file`, até 5 MB; vira JPEG 192×192) · remove a foto de perfil. Os usuários trazem `photoUrl` |
 | `PUT`/`DELETE /api/likes/{titleId}?source=` | "Quero ver" |
 | `PUT`/`DELETE /api/titles/{id}/signals/{kind}?source=` | Passa, talvez, já vi ou salvar (`kind`: `PASS`, `MAYBE`, `SEEN`, `SAVED`) |
 | `GET /api/me/signals?ids=1,2,3` | Para cada título: quais sinais eu marquei |
@@ -243,7 +250,7 @@ lateral. Os dados de "onde assistir" vêm da JustWatch, creditada em `/sobre` e 
 | `/entrar` | Login (sem navegação) | claro |
 | `/cadastro` | Criar conta em 3 etapas: conta, títulos de que gosta, confirmar o e-mail (sem navegação) | claro |
 | `/perfil` | Seu perfil: números, curtidas por semana e últimos curtidos | claro |
-| `/ajustes` | Nome, cor, Bu, favoritos, conta e sair | claro |
+| `/ajustes` | Nome, cor, Bu ou foto, favoritos, conta e sair | claro |
 | `/admin/videos` | Só administradores: teste dos vídeos do Reels, duas abas: Verificação (fila dos pendentes por título com Aprovar/Reprovar só em ícone, busca no YouTube com "Pular títulos que já têm vídeo aprovado" e busca avançada — de onde, tipo, gênero, ano, buscar de novo —, "Reprovar todos") e Histórico (aprovados/reprovados, com filtro, busca e "Desfazer") (link "Vídeos" abaixo de Ajustes na barra lateral e em Ajustes › Conta) | claro |
 | `/sobre` | Sobre e créditos | claro |
 | `/series`, `/filmes` | Por enquanto abrem a busca | escuro |
