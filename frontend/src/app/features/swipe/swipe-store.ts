@@ -1,5 +1,6 @@
 import { computed, DestroyRef, inject, Injectable, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { AuthStore } from '../../core/auth/auth-store';
 import { CatalogApi } from '../../core/api/catalog-api';
 import { SignalKind, TitleCard } from '../../core/api/models';
 import { LikesStore } from '../../core/social/likes-store';
@@ -8,7 +9,11 @@ import { SignalsStore } from '../../core/social/signals-store';
 export type Decision = 'pass' | 'maybe' | 'like' | 'seen';
 
 /** "Quero ver" vai para as curtidas; o resto vira um sinal no back. */
-const SIGNAL: Record<Exclude<Decision, 'like'>, SignalKind> = { pass: 'PASS', maybe: 'MAYBE', seen: 'SEEN' };
+const SIGNAL: Record<Exclude<Decision, 'like'>, SignalKind> = {
+  pass: 'PASS',
+  maybe: 'MAYBE',
+  seen: 'SEEN',
+};
 
 export interface Choice {
   card: TitleCard;
@@ -24,10 +29,24 @@ export function newSeed(): string {
   return Math.random().toString(36).slice(2, 12);
 }
 
+/** Onde o deck que falta fica guardado, para o F5 voltar na mesma carta (um por usuário). */
+export const DECK_STORAGE_KEY = 'ww.swipe';
+
+function storage(): Storage | null {
+  try {
+    return globalThis.localStorage ?? null;
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Estado do Swipe: deck carregado aos poucos por cursor, posição atual e histórico de escolhas.
  * Toda escolha vai para o back: "quero ver" nas curtidas (aparece para os amigos) e
  * talvez/passa/já vi como sinais. "Voltar" desfaz a escolha no back também.
+ *
+ * As cartas que ainda faltam ficam no localStorage: ao recarregar, o deck volta na mesma carta e
+ * o resto vem de uma seed nova (o back já tira o que foi avaliado, e as repetidas são ignoradas).
  */
 @Injectable()
 export class SwipeStore {
@@ -35,6 +54,7 @@ export class SwipeStore {
   private readonly likes = inject(LikesStore);
   private readonly signals = inject(SignalsStore);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly storageKey = `${DECK_STORAGE_KEY}.${inject(AuthStore).user()?.id ?? 'anon'}`;
 
   private seed = newSeed();
   /** undefined = ainda não buscou; null = acabou */
@@ -49,16 +69,30 @@ export class SwipeStore {
   readonly current = computed(() => this.cards()[this.index()] ?? null);
   readonly next = computed(() => this.cards()[this.index() + 1] ?? null);
   readonly last = computed(() => this.history().at(-1) ?? null);
-  readonly finished = computed(() => this.status() === 'ready' && this.cursor === null && !this.current());
+  readonly finished = computed(
+    () => this.status() === 'ready' && this.cursor === null && !this.current(),
+  );
   readonly counts = computed(() => {
     const c: Record<Decision, number> = { pass: 0, maybe: 0, like: 0, seen: 0 };
     for (const h of this.history()) c[h.decision]++;
     return c;
   });
-  readonly liked = computed(() => this.history().filter((h) => h.decision === 'like').map((h) => h.card));
+  readonly liked = computed(() =>
+    this.history()
+      .filter((h) => h.decision === 'like')
+      .map((h) => h.card),
+  );
 
   start(): void {
-    this.fetch();
+    const saved = this.restore();
+    if (saved.length) {
+      this.cards.set(saved);
+      this.likes.ensure(saved.map((c) => c.id));
+      this.status.set('ready');
+      this.prefetch();
+    } else {
+      this.fetch();
+    }
   }
 
   decide(decision: Decision): void {
@@ -67,6 +101,7 @@ export class SwipeStore {
     this.history.update((h) => [...h, { card, decision }]);
     this.index.update((i) => i + 1);
     this.persist(card.id, decision, true);
+    this.save();
     this.prefetch();
   }
 
@@ -76,6 +111,30 @@ export class SwipeStore {
     this.history.update((h) => h.slice(0, -1));
     this.index.update((i) => Math.max(0, i - 1));
     this.persist(last.card.id, last.decision, false);
+    this.save();
+  }
+
+  /** Guarda as cartas que faltam (a de cima primeiro). */
+  private save(): void {
+    const rest = this.cards().slice(this.index(), this.index() + PAGE_SIZE);
+    try {
+      if (rest.length) storage()?.setItem(this.storageKey, JSON.stringify(rest));
+      else storage()?.removeItem(this.storageKey);
+    } catch {
+      // sem espaço ou bloqueado: só não lembra a posição
+    }
+  }
+
+  private restore(): TitleCard[] {
+    try {
+      const parsed: unknown = JSON.parse(storage()?.getItem(this.storageKey) ?? '[]');
+      if (!Array.isArray(parsed)) return [];
+      return parsed.filter(
+        (c): c is TitleCard => typeof c?.id === 'number' && typeof c?.title === 'string',
+      );
+    } catch {
+      return [];
+    }
   }
 
   private persist(titleId: number, decision: Decision, on: boolean): void {
@@ -117,6 +176,7 @@ export class SwipeStore {
           this.cards.update((cs) => [...cs, ...fresh]);
           this.likes.ensure(fresh.map((c) => c.id));
           this.status.set('ready');
+          this.save();
         },
         error: () => {
           this.fetching = false;

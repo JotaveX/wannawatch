@@ -1,4 +1,14 @@
-import { ChangeDetectionStrategy, Component, computed, inject, viewChildren } from '@angular/core';
+import {
+  afterRenderEffect,
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  ElementRef,
+  inject,
+  signal,
+  viewChild,
+  viewChildren,
+} from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { length, typeLabel } from '../../core/format';
 import { titleLink } from '../../core/title-link';
@@ -44,6 +54,9 @@ export class SwipePage {
   protected readonly store = inject(SwipeStore);
   private readonly likes = inject(LikesStore);
   private readonly cards = viewChildren(SwipeCard);
+  private readonly overview = viewChild<ElementRef<HTMLElement>>('overview');
+  /** a sinopse passou da altura fixa do painel: ganha o fade e o "Ler mais" */
+  protected readonly overviewClamped = signal(false);
 
   /** carta de baixo primeiro, para a de cima ficar por cima no DOM */
   protected readonly stack = computed(() =>
@@ -78,6 +91,11 @@ export class SwipePage {
 
   constructor() {
     this.store.start();
+    afterRenderEffect(() => {
+      this.store.current();
+      const el = this.overview()?.nativeElement;
+      this.overviewClamped.set(!!el && el.scrollHeight > el.clientHeight + 1);
+    });
   }
 
   protected act(decision: Decision): void {

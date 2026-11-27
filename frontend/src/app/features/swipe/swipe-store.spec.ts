@@ -3,7 +3,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { TestBed } from '@angular/core/testing';
 import { API_BASE_URL } from '../../core/api/api-config';
 import { card } from '../../../testing/fixtures';
-import { PAGE_SIZE, SwipeStore } from './swipe-store';
+import { DECK_STORAGE_KEY, PAGE_SIZE, SwipeStore } from './swipe-store';
 
 const range = (from: number, n: number) => Array.from({ length: n }, (_, i) => card(from + i));
 
@@ -12,6 +12,7 @@ describe('SwipeStore', () => {
   let http: HttpTestingController;
 
   beforeEach(() => {
+    localStorage.clear();
     TestBed.configureTestingModule({
       providers: [SwipeStore, provideHttpClient(), provideHttpClientTesting(), { provide: API_BASE_URL, useValue: '/api' }],
     });
@@ -113,5 +114,35 @@ describe('SwipeStore', () => {
     store.decide('seen');
     http.expectOne('/api/titles/1/signals/MAYBE?source=SWIPE');
     http.expectOne('/api/titles/2/signals/SEEN?source=SWIPE');
+  });
+
+  it('lembra a carta atual depois de recarregar e busca o resto com outra seed', () => {
+    store.start();
+    const first = deck();
+    const seed = first.request.params.get('seed');
+    first.flush({ items: range(1, 8), nextCursor: 'c1' });
+    store.decide('pass');
+    store.decide('pass');
+    http.match(() => true).forEach((r) => r.flush(null));
+    expect(JSON.parse(localStorage.getItem(`${DECK_STORAGE_KEY}.anon`)!)[0].id).toBe(3);
+
+    // "F5": um store novo
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      providers: [SwipeStore, provideHttpClient(), provideHttpClientTesting(), { provide: API_BASE_URL, useValue: '/api' }],
+    });
+    const again = TestBed.inject(SwipeStore);
+    const http2 = TestBed.inject(HttpTestingController);
+    again.start();
+    expect(again.status()).toBe('ready');
+    expect(again.current()?.id).toBe(3);
+    expect(again.cards().map((c) => c.id)).toEqual([3, 4, 5, 6, 7, 8]);
+
+    again.decide('pass'); // sobram 5 → busca mais, sem cursor e com seed nova
+    const more = http2.expectOne((r) => r.url === '/api/swipe/deck');
+    expect(more.request.params.has('cursor')).toBe(false);
+    expect(more.request.params.get('seed')).not.toBe(seed);
+    more.flush({ items: [card(5), card(9)], nextCursor: null });
+    expect(again.cards().map((c) => c.id)).toEqual([3, 4, 5, 6, 7, 8, 9]);
   });
 });

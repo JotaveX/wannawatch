@@ -34,6 +34,7 @@ const ICONS = {
   'chevron-down': '<path d="M6 9l6 6 6-6"/>',
   'chevron-left': '<path d="M15 6l-6 6 6 6"/>',
   'arrow-left': '<path d="M19 12H5M11 6l-6 6 6 6"/>',
+  'arrow-right': '<path d="M5 12h14M13 6l6 6-6 6"/>',
   external:
     '<path d="M14 4h6v6M20 4l-9 9"/><path d="M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/>',
   logout: '<path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3"/><path d="M10 8l-4 4 4 4M6 12h10"/>',

@@ -438,6 +438,8 @@ Onde entra:
   a ordem é `0,4·popularidade + 0,15 se tiver vídeo`.
 - Swipe e Reels guardam a ordem calculada na primeira página por 30 minutos. A paginação segue
   essa ordem e não pula nem repete nada enquanto o score muda com os seus swipes.
+- O Swipe lembra onde você parou: as cartas que faltam ficam no navegador (`ww.swipe.<id>`), então
+  o F5 volta na mesma carta, e o resto do deck vem de uma seed nova.
 - Sem login, a API devolve tudo como antes (Swipe aleatório fixo pela seed, Reels por
   popularidade com o reforço do vídeo), sem motivo.
 

@@ -83,7 +83,14 @@
           </ul>
         }
         @if (c.overview) {
-          <p class="overview">{{ c.overview }}</p>
+          <div class="overview" [class.clamped]="overviewClamped()">
+            <p #overview>{{ c.overview }}</p>
+            @if (overviewClamped()) {
+              <a class="more" [routerLink]="titleLink(c)" [attr.aria-label]="'Ler a sinopse completa de ' + c.title">
+                Ler mais <ww-icon name="arrow-right" [size]="14" [stroke]="2.2" />
+              </a>
+            }
+          </div>
         }
         @if (currentLikedBy(); as likedBy) {
           <p class="friends">{{ likedBy }}</p>

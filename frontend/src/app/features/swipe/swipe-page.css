@@ -99,6 +99,12 @@ header {
   color: var(--ww-yellow-strong);
 }
 
+@property --fade {
+  syntax: '<percentage>';
+  inherits: false;
+  initial-value: 40%;
+}
+
 .panel {
   display: none;
 }
@@ -167,10 +173,52 @@ header {
     font-size: 12px;
     font-weight: 600;
   }
+  /* sinopse com altura fixa: o que passa some num fade e o "Ler mais" leva aos detalhes */
   .overview {
+    position: relative;
+    width: 100%;
+  }
+  .overview p {
+    max-height: calc(14px * 1.5 * 6);
+    overflow: hidden;
     font-size: 14px;
     line-height: 1.5;
     color: #424245;
+  }
+  .clamped p {
+    --fade: 40%;
+    mask-image: linear-gradient(to bottom, #000 var(--fade), transparent);
+    transition: --fade 320ms var(--ww-ease);
+  }
+  .clamped:hover p,
+  .clamped:focus-within p {
+    --fade: 62%;
+  }
+  .more {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    min-height: 44px;
+    padding-right: 4px;
+    margin-top: -6px;
+    border-radius: var(--ww-radius-pill);
+    color: var(--ww-pink-strong);
+    font-size: 13px;
+    font-weight: 700;
+    text-decoration: none;
+  }
+  /* o bloco todo é clicável */
+  .more::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+  }
+  .more ww-icon {
+    transition: transform 200ms var(--ww-ease);
+  }
+  .more:hover ww-icon,
+  .more:focus-visible ww-icon {
+    transform: translateX(3px);
   }
   .counts {
     display: grid;
@@ -232,5 +280,12 @@ header {
     font-family: var(--ww-font-ui);
     font-size: 13px;
     font-weight: 600;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .clamped p,
+  .more ww-icon {
+    transition: none;
   }
 }
