@@ -52,7 +52,10 @@ Swagger: `http://localhost:8081/swagger-ui.html`. Component showcase (dev only):
 - **Catalog source**: the frontend never talks to TMDB. `tmdb/importer` (`CatalogImporter` → `TmdbMapper` →
   `CatalogWriter`) pulls lists configured in `wannawatch.import.lists` into Postgres; it runs on startup if the DB
   is empty, on a daily cron, and via `POST /api/admin/import` (`X-Admin-Token`). Import is idempotent.
-  `TmdbClient` throttles (`RequestThrottle`) and retries 429/5xx. Display-only data lives in a JSONB column on
+  `TmdbClient` throttles (`RequestThrottle`) and retries 429/5xx. Search gets a bigger catalog: `ExportImporter`
+  (top N of TMDB's daily id export, weekly) and `SearchImporter` (asks `/search/multi` when local search finds few
+  titles) write `title.in_feeds = false`. Feed/recommendation SQL (Home, Swipe, Reels, Match, `CatalogFeatureLoader`)
+  must filter `in_feeds`; search, details and `/api/titles` don't. Display-only data lives in a JSONB column on
   `title`; one `title` table covers both movies and series (`MediaType`).
 - **Auth**: no Spring Security. Opaque bearer token (SHA-256 stored) resolved by `AuthUserResolver`, a
   `HandlerMethodArgumentResolver` — an endpoint is protected simply by declaring an `AuthUser` parameter (throws

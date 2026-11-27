@@ -17,6 +17,9 @@ public final class TmdbDto {
     /** Item das listas (popular, top_rated, trending). */
     public record ListItem(Integer id, String mediaType, Boolean adult, Double popularity) {}
 
+    /** Item da busca (/search/multi): pode ser filme, série ou pessoa. */
+    public record SearchItem(Integer id, String mediaType, Boolean adult, Double popularity, String posterPath) {}
+
     public record GenreList(List<Genre> genres) {}
 
     public record Genre(Integer id, String name) {}

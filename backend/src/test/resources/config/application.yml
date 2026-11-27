@@ -10,6 +10,10 @@ wannawatch:
     on-startup-if-empty: false
     cron: "-"
     admin-token: test-admin
+    export:
+      cron: "-"
+    search:
+      enabled: false   # ligada só nos testes da busca na TMDB
   # fotos de perfil sempre em disco nos testes, nunca no R2 de verdade
   photos:
     r2:

@@ -98,7 +98,7 @@ Documentação interativa (Swagger): <http://localhost:8081/swagger-ui.html>
 | `GET /api/home` | Destaque e fileiras da Home (com login: personalizadas, com "Pra você") |
 | `GET /api/swipe/deck?seed=&cursor=&size=` | Deck do Swipe: com login, personalizado (varia com a `seed`); sem, aleatório fixo por `seed` |
 | `GET /api/reels?cursor=&size=` | Feed do Reels: com login, personalizado; sem, por popularidade. Cada item traz `video` (`{ platform, key }`) quando o título tem vídeo aprovado, senão `null` |
-| `GET /api/search?q=&page=&size=` | Busca fuzzy por título, pessoa e gênero |
+| `GET /api/search?q=&page=&size=` | Busca fuzzy por título, pessoa e gênero. Se a primeira página tiver menos de 3 acertos pelo nome, pergunta à TMDB e importa o que faltar (veja "Catálogo da busca") |
 | `POST /api/auth/login` · `POST /api/auth/logout` · `GET /api/auth/me` | Login por usuário ou e-mail (devolve o token e a etapa do cadastro em `account`) |
 | `GET /api/auth/account` | Quem está logado e em que etapa do cadastro está (`{ user, account }`) |
 | `POST /api/auth/register` | Cadastro, etapa 1: cria a conta já logada e manda o código por e-mail (201) |
@@ -234,6 +234,35 @@ Regras:
   caem em cascata junto. Para atualizar o catálogo, basta rodar a importação de novo. O log de
   interações (`interaction_event`) sobrevive, mas as curtidas e os sinais não voltam sozinhos.
 - Limite de 20 requisições/s à TMDB, com novas tentativas em 429/5xx.
+
+### Catálogo da busca
+
+As listas acima dão algumas centenas de títulos, pouco para a busca. Por isso há mais duas fontes,
+que gravam os títulos com `title.in_feeds = false`: eles aparecem na busca, nos detalhes e em
+Filmes/Séries, mas **não** na Home, no Swipe, no Reels, no Match nem na recomendação (que continuam
+só com os títulos das listas). Se um título desses entra numa lista do dia, passa a `in_feeds = true`;
+o contrário nunca acontece.
+
+1. **Export diário da TMDB** (`wannawatch.import.export`): a TMDB publica todo dia um `.json.gz` com
+   todos os ids (~1,2 milhão de filmes, ~240 mil séries) e a popularidade de cada um. O back lê o
+   arquivo em streaming, fica com os 80 mil filmes e 20 mil séries mais populares (sem adultos nem
+   "vídeos") e busca os detalhes só dos que ainda não estão no banco. A primeira carga leva umas
+   1h30 a 20 req/s; depois cada rodada só traz o que entrou no top. Grava em lotes, então pode ser
+   interrompida e continua de onde parou. Roda todo domingo às 5h (`export.cron`; `"-"` desliga) ou na hora:
+
+   ```bash
+   curl -X POST -H "X-Admin-Token: $ADMIN_TOKEN" localhost:8081/api/admin/import/export   # dispara (202)
+   curl -H "X-Admin-Token: $ADMIN_TOKEN" localhost:8081/api/admin/import/export            # progresso e último resultado
+   ```
+
+2. **Busca na TMDB** (`wannawatch.import.search`): quando a primeira página da busca tem menos de
+   `min-title-hits` (3) acertos pelo nome, o back chama o `/search/multi` da TMDB, importa até
+   `max-titles` (6) filmes/séries com pôster que faltam e busca de novo (a resposta demora um ou dois
+   segundos a mais). A mesma consulta não vai à TMDB de novo por 12h, e há um teto de 30 consultas
+   por minuto somando todo mundo (a busca é aberta a visitantes). Erro da TMDB só vai para o log.
+
+Gravações de título são feitas uma por vez (`pg_advisory_xact_lock`), porque as três importações
+podem rodar ao mesmo tempo e gravar as mesmas pessoas.
 
 ## Vídeos do Reels (teste)
 
@@ -428,7 +457,8 @@ Onde entra:
   O token fica só no `.env` do back.
 - Uma tabela `title` para filme e série; dados só de exibição (produtoras, países, onde assistir)
   numa coluna JSONB.
-- Busca fuzzy no próprio Postgres (`pg_trgm` + `unaccent`), sem serviço extra.
+- Busca fuzzy no próprio Postgres (`pg_trgm` + `unaccent`), sem serviço extra, sobre um catálogo
+  maior que o dos feeds (export da TMDB + busca na TMDB quando falta), separado por `title.in_feeds`.
 - Recomendação por conteúdo, calculada em memória no back (sem ML, embeddings nem serviço extra);
   Reels, Swipe e o deck do Match paginam por cursor sobre uma ordem guardada.
 - Match sem WebSocket: consulta periódica basta para salas pequenas. Toda escrita trava a linha da

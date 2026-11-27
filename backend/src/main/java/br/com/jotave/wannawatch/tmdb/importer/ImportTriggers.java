@@ -8,18 +8,21 @@ import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
-/** Gatilhos automáticos: ao subir com o banco vazio e no horário agendado. */
+/** Gatilhos automáticos: ao subir com o banco vazio e nos horários agendados (listas e export). */
 @Component
 public class ImportTriggers {
 
     private static final Logger log = LoggerFactory.getLogger(ImportTriggers.class);
 
     private final CatalogImporter importer;
+    private final ExportImporter exportImporter;
     private final ImportProperties props;
     private final TitleRepository titles;
 
-    public ImportTriggers(CatalogImporter importer, ImportProperties props, TitleRepository titles) {
+    public ImportTriggers(CatalogImporter importer, ExportImporter exportImporter, ImportProperties props,
+                          TitleRepository titles) {
         this.importer = importer;
+        this.exportImporter = exportImporter;
         this.props = props;
         this.titles = titles;
     }
@@ -35,5 +38,10 @@ public class ImportTriggers {
     @Scheduled(cron = "${wannawatch.import.cron:-}", zone = "${wannawatch.import.zone:America/Sao_Paulo}")
     public void scheduled() {
         importer.run("agendamento");
+    }
+
+    @Scheduled(cron = "${wannawatch.import.export.cron:-}", zone = "${wannawatch.import.zone:America/Sao_Paulo}")
+    public void scheduledExport() {
+        exportImporter.run("agendamento");
     }
 }

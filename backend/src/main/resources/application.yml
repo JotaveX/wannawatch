@@ -108,6 +108,22 @@ wannawatch:
       - { key: popular_series, path: /tv/popular,       media-type: SERIES, pages: 5 }
       - { key: top_movie,      path: /movie/top_rated,  media-type: MOVIE,  pages: 5 }
       - { key: top_series,     path: /tv/top_rated,     media-type: SERIES, pages: 5 }
+    # Catálogo grande só para a busca: os mais populares do export diário de ids da TMDB.
+    # Só busca o que ainda não está no banco; a primeira carga leva ~1h30 (20 req/s).
+    # Disparo na hora: POST /api/admin/import/export.
+    export:
+      base-url: https://files.tmdb.org/p/exports
+      cron: "0 0 5 * * SUN"   # domingo às 5h; "-" desliga
+      max-movies: 80000
+      max-series: 20000
+      batch-size: 100
+    # Quando a busca daqui acha pouco pelo nome, pergunta à TMDB e importa os resultados.
+    search:
+      enabled: true
+      min-title-hits: 3
+      max-titles: 6
+      cache-ttl: 12h
+      max-per-minute: 30
     # A TMDB não traduz estes gêneros de série para pt-BR.
     genre-names:
       "10759": Ação e aventura

@@ -11,7 +11,8 @@ import java.util.Map;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 
 /**
  * Busca fuzzy (pg_trgm + unaccent) em títulos, pessoas e gêneros, devolvendo uma lista única
@@ -21,6 +22,9 @@ import org.springframework.transaction.annotation.Transactional;
  * <p>Ordem: primeiro a qualidade do acerto (em faixas de 0,1), e dentro da mesma faixa
  * título > pessoa > gênero, depois popularidade. Assim um gênero exato ("terror") vem antes
  * de um título só parecido ("Terra da Máfia").
+ *
+ * <p>Se a primeira página tiver menos de {@code min-title-hits} acertos pelo nome do título,
+ * pergunta à TMDB ({@link MissingTitleLookup}); se ela trouxer títulos novos, busca de novo.
  */
 @Service
 public class SearchService {
@@ -30,10 +34,10 @@ public class SearchService {
             by_title AS (
                 SELECT t.id, 1 AS kind_rank, NULL::text AS label, NULL::text AS credit_type, NULL::text AS job,
                        greatest(word_similarity(q.q, f_unaccent(lower(t.title))),
-                                word_similarity(q.q, f_unaccent(lower(coalesce(t.original_title, ''))))) AS score
+                                word_similarity(q.q, f_unaccent(lower(t.original_title)))) AS score
                 FROM title t, q
                 WHERE q.q <% f_unaccent(lower(t.title))
-                   OR q.q <% f_unaccent(lower(coalesce(t.original_title, '')))
+                   OR q.q <% f_unaccent(lower(t.original_title))
             ),
             by_person AS (
                 SELECT DISTINCT ON (c.title_id) c.title_id AS id, 2 AS kind_rank,
@@ -60,18 +64,39 @@ public class SearchService {
 
     private final JdbcClient jdbc;
     private final TitleCards cards;
+    private final MissingTitleLookup lookup;
+    private final TransactionTemplate readOnly;
     private final double threshold;
+    private final int minTitleHits;
 
-    public SearchService(JdbcClient jdbc, TitleCards cards,
-                         @Value("${wannawatch.search.similarity-threshold:0.6}") double threshold) {
+    public SearchService(JdbcClient jdbc, TitleCards cards, MissingTitleLookup lookup,
+                         PlatformTransactionManager transactions,
+                         @Value("${wannawatch.search.similarity-threshold:0.6}") double threshold,
+                         @Value("${wannawatch.import.search.min-title-hits:3}") int minTitleHits) {
         this.jdbc = jdbc;
         this.cards = cards;
+        this.lookup = lookup;
+        this.readOnly = new TransactionTemplate(transactions);
+        this.readOnly.setReadOnly(true);
         this.threshold = threshold;
+        this.minTitleHits = minTitleHits;
     }
 
-    @Transactional(readOnly = true)
+    /** A busca na TMDB fica fora da transação: ela grava, e pode levar um ou dois segundos. */
     public PageResponse<SearchHit> search(String query, int page, int size) {
         String q = query.trim();
+        PageResponse<SearchHit> local = readOnly.execute(tx -> searchLocal(q, page, size));
+        if (page == 0 && titleHits(local) < minTitleHits && lookup.fetchMissing(q)) {
+            return readOnly.execute(tx -> searchLocal(q, page, size));
+        }
+        return local;
+    }
+
+    private static long titleHits(PageResponse<SearchHit> result) {
+        return result.items().stream().filter(h -> h.matchedBy().kind() == MatchKind.TITLE).count();
+    }
+
+    private PageResponse<SearchHit> searchLocal(String q, int page, int size) {
         // Vale só para esta transação.
         jdbc.sql("SELECT set_config('pg_trgm.word_similarity_threshold', :t, true)")
                 .param("t", Double.toString(threshold)).query(String.class).single();

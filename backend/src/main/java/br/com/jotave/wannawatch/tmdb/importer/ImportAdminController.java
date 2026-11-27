@@ -14,18 +14,21 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * Disparo manual da importação. Protegido pelo header X-Admin-Token (valor do ADMIN_TOKEN).
- * Sem ADMIN_TOKEN configurado, o endpoint responde 404 (fica desligado).
+ * Disparo manual das importações: {@code /api/admin/import} (listas do dia) e
+ * {@code /api/admin/import/export} (catálogo grande, só para a busca). Protegido pelo header
+ * X-Admin-Token (valor do ADMIN_TOKEN). Sem ADMIN_TOKEN configurado, responde 404 (fica desligado).
  */
 @RestController
 @RequestMapping("/api/admin/import")
 public class ImportAdminController {
 
     private final CatalogImporter importer;
+    private final ExportImporter exportImporter;
     private final ImportProperties props;
 
-    public ImportAdminController(CatalogImporter importer, ImportProperties props) {
+    public ImportAdminController(CatalogImporter importer, ExportImporter exportImporter, ImportProperties props) {
         this.importer = importer;
+        this.exportImporter = exportImporter;
         this.props = props;
     }
 
@@ -46,6 +49,27 @@ public class ImportAdminController {
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("running", importer.isRunning());
         body.put("lastResult", importer.lastResult().orElse(null));
+        return ResponseEntity.ok(body);
+    }
+
+    @PostMapping("/export")
+    public ResponseEntity<?> startExport(@RequestHeader(value = "X-Admin-Token", required = false) String token) {
+        ResponseEntity<ProblemDetail> denied = checkToken(token);
+        if (denied != null) return denied;
+        if (!exportImporter.startAsync("endpoint de admin")) {
+            return problem(HttpStatus.CONFLICT, "Já existe uma importação do export em andamento.");
+        }
+        return ResponseEntity.accepted().body(Map.of("status", "STARTED"));
+    }
+
+    @GetMapping("/export")
+    public ResponseEntity<?> exportStatus(@RequestHeader(value = "X-Admin-Token", required = false) String token) {
+        ResponseEntity<ProblemDetail> denied = checkToken(token);
+        if (denied != null) return denied;
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("running", exportImporter.isRunning());
+        body.put("progress", exportImporter.progress().orElse(null));
+        body.put("lastResult", exportImporter.lastResult().orElse(null));
         return ResponseEntity.ok(body);
     }
 

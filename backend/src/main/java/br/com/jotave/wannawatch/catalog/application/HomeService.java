@@ -106,7 +106,7 @@ public class HomeService {
     private Optional<Long> personalHeroId(UserScores scores) {
         List<Long> candidates = jdbc.sql("""
                 SELECT t.id FROM title_ranking r JOIN title t ON t.id = r.title_id
-                WHERE r.list_key = 'trending_day' AND t.backdrop_path IS NOT NULL AND t.overview IS NOT NULL
+                WHERE r.list_key = 'trending_day' AND t.backdrop_path IS NOT NULL AND t.in_feeds AND t.overview IS NOT NULL
                 ORDER BY r.position LIMIT :limit""")
                 .param("limit", HERO_CANDIDATES).query(Long.class).list();
         return scores.rank(candidates).stream().findFirst();
@@ -142,18 +142,18 @@ public class HomeService {
     }
 
     private List<Long> withOverview() {
-        return jdbc.sql("SELECT id FROM title WHERE overview IS NOT NULL").query(Long.class).list();
+        return jdbc.sql("SELECT id FROM title WHERE in_feeds AND overview IS NOT NULL").query(Long.class).list();
     }
 
     private List<Long> bingeCandidates() {
-        return jdbc.sql("SELECT id FROM title WHERE media_type = :type AND seasons_count >= 2 AND overview IS NOT NULL")
+        return jdbc.sql("SELECT id FROM title WHERE media_type = :type AND seasons_count >= 2 AND in_feeds AND overview IS NOT NULL")
                 .param("type", MediaType.SERIES.name()).query(Long.class).list();
     }
 
     private List<Long> genreCandidates(long genreId) {
         return jdbc.sql("""
                 SELECT t.id FROM title t JOIN title_genre tg ON tg.title_id = t.id
-                WHERE tg.genre_id = :g AND t.overview IS NOT NULL""")
+                WHERE tg.genre_id = :g AND t.in_feeds AND t.overview IS NOT NULL""")
                 .param("g", genreId).query(Long.class).list();
     }
 
@@ -179,7 +179,7 @@ public class HomeService {
         return jdbc.sql("""
                 SELECT t.id FROM title t
                 LEFT JOIN title_ranking r ON r.title_id = t.id AND r.list_key = 'trending_day'
-                WHERE t.backdrop_path IS NOT NULL AND t.overview IS NOT NULL
+                WHERE t.backdrop_path IS NOT NULL AND t.in_feeds AND t.overview IS NOT NULL
                 ORDER BY r.position NULLS LAST, t.popularity DESC
                 LIMIT 1""").query(Long.class).optional();
     }
@@ -207,7 +207,7 @@ public class HomeService {
     private List<Long> bingeSeries() {
         return jdbc.sql("""
                 SELECT id FROM title
-                WHERE media_type = :type AND seasons_count >= 2 AND overview IS NOT NULL
+                WHERE media_type = :type AND seasons_count >= 2 AND in_feeds AND overview IS NOT NULL
                 ORDER BY popularity DESC, id LIMIT :limit""")
                 .param("type", MediaType.SERIES.name()).param("limit", ROW_SIZE)
                 .query(Long.class).list();
@@ -226,7 +226,7 @@ public class HomeService {
         return jdbc.sql("""
                 SELECT g.id, g.name, g.slug FROM genre g
                 WHERE (SELECT count(*) FROM title_genre tg JOIN title t ON t.id = tg.title_id
-                       WHERE tg.genre_id = g.id AND t.overview IS NOT NULL) >= :min
+                       WHERE tg.genre_id = g.id AND t.in_feeds AND t.overview IS NOT NULL) >= :min
                 ORDER BY md5(:day || g.slug)""")
                 .param("min", MIN_TITLES_PER_GENRE_ROW).param("day", day)
                 .query((rs, n) -> new GenreRow(rs.getLong("id"), rs.getString("name"), rs.getString("slug")))
@@ -236,7 +236,7 @@ public class HomeService {
     private List<Long> genreTitles(long genreId) {
         return jdbc.sql("""
                 SELECT t.id FROM title t JOIN title_genre tg ON tg.title_id = t.id
-                WHERE tg.genre_id = :g AND t.overview IS NOT NULL
+                WHERE tg.genre_id = :g AND t.in_feeds AND t.overview IS NOT NULL
                 ORDER BY t.popularity DESC, t.id LIMIT :limit""")
                 .param("g", genreId).param("limit", ROW_SIZE).query(Long.class).list();
     }

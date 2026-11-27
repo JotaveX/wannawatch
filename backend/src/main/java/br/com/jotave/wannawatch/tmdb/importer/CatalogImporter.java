@@ -3,7 +3,6 @@ package br.com.jotave.wannawatch.tmdb.importer;
 import br.com.jotave.wannawatch.catalog.domain.MediaType;
 import br.com.jotave.wannawatch.tmdb.client.TmdbClient;
 import br.com.jotave.wannawatch.tmdb.client.TmdbDto;
-import br.com.jotave.wannawatch.tmdb.client.TmdbException;
 import br.com.jotave.wannawatch.tmdb.client.TmdbProperties;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -12,10 +11,6 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import org.slf4j.Logger;
@@ -37,20 +32,20 @@ public class CatalogImporter {
     private final TmdbProperties tmdbProps;
     private final ImportProperties props;
     private final CatalogWriter writer;
-    private final TmdbMapper mapper;
+    private final TitleFetcher fetcher;
     private final ApplicationEventPublisher events;
 
     private final AtomicBoolean running = new AtomicBoolean(false);
     private final AtomicReference<ImportResult> lastResult = new AtomicReference<>();
 
     public CatalogImporter(TmdbClient tmdb, TmdbProperties tmdbProps, ImportProperties props, CatalogWriter writer,
-                           ApplicationEventPublisher events) {
+                           TitleFetcher fetcher, ApplicationEventPublisher events) {
         this.events = events;
         this.tmdb = tmdb;
         this.tmdbProps = tmdbProps;
         this.props = props;
         this.writer = writer;
-        this.mapper = new TmdbMapper(tmdbProps.language(), tmdbProps.region());
+        this.fetcher = fetcher;
     }
 
     public boolean isRunning() {
@@ -100,27 +95,28 @@ public class CatalogImporter {
         try {
             int genreCount = writer.upsertGenres(tmdb.movieGenres(), tmdb.tvGenres(), props.genreNames());
 
-            Map<String, List<Ref>> lists = new LinkedHashMap<>();
+            Map<String, List<TitleRef>> lists = new LinkedHashMap<>();
             for (ImportProperties.ListSpec spec : props.lists()) {
                 lists.put(spec.key(), fetchList(spec));
             }
-            LinkedHashSet<Ref> unique = new LinkedHashSet<>();
+            LinkedHashSet<TitleRef> unique = new LinkedHashSet<>();
             lists.values().forEach(unique::addAll);
             log.info("{} títulos únicos em {} listas; buscando detalhes", unique.size(), lists.size());
 
-            Map<Ref, ImportedTitle> fetched = new LinkedHashMap<>();
-            int failed = fetchDetails(unique, fetched);
+            TitleFetcher.Fetched details = fetcher.fetch(unique);
+            Map<TitleRef, ImportedTitle> fetched = details.titles();
+            int failed = details.failed();
 
             Instant now = Instant.now();
-            Map<Ref, Long> saved = new LinkedHashMap<>();
+            Map<TitleRef, Long> saved = new LinkedHashMap<>();
             int skipped = 0;
-            for (Map.Entry<Ref, ImportedTitle> e : fetched.entrySet()) {
+            for (Map.Entry<TitleRef, ImportedTitle> e : fetched.entrySet()) {
                 if (e.getValue().adult()) {
                     skipped++;
                     continue;
                 }
                 try {
-                    saved.put(e.getKey(), writer.upsertTitle(e.getValue(), now));
+                    saved.put(e.getKey(), writer.upsertTitle(e.getValue(), now, true));
                 } catch (RuntimeException ex) {
                     failed++;
                     log.warn("Falha ao gravar {} {}: {}", e.getKey().type(), e.getKey().id(), ex.getMessage());
@@ -156,14 +152,14 @@ public class CatalogImporter {
         return r;
     }
 
-    private List<Ref> fetchList(ImportProperties.ListSpec spec) {
-        LinkedHashSet<Ref> refs = new LinkedHashSet<>();
+    private List<TitleRef> fetchList(ImportProperties.ListSpec spec) {
+        LinkedHashSet<TitleRef> refs = new LinkedHashSet<>();
         for (int page = 1; page <= spec.pages(); page++) {
             TmdbDto.Page<TmdbDto.ListItem> p = tmdb.list(spec.path(), page);
             for (TmdbDto.ListItem item : p.results()) {
                 if (item.id() == null || Boolean.TRUE.equals(item.adult())) continue;
                 MediaType type = spec.mediaType() != null ? spec.mediaType() : parseType(item.mediaType());
-                if (type != null) refs.add(new Ref(item.id(), type));
+                if (type != null) refs.add(new TitleRef(item.id(), type));
             }
             if (page >= p.totalPages()) break;
         }
@@ -176,40 +172,4 @@ public class CatalogImporter {
         return null; // "person" e afins
     }
 
-    /** Busca os detalhes em paralelo. Devolve quantos falharam. */
-    private int fetchDetails(LinkedHashSet<Ref> refs, Map<Ref, ImportedTitle> out) {
-        Semaphore permits = new Semaphore(Math.max(1, tmdbProps.maxConcurrency()));
-        Map<Ref, Future<ImportedTitle>> futures = new LinkedHashMap<>();
-        try (ExecutorService pool = Executors.newVirtualThreadPerTaskExecutor()) {
-            for (Ref ref : refs) {
-                futures.put(ref, pool.submit(() -> {
-                    permits.acquire();
-                    try {
-                        return ref.type() == MediaType.MOVIE
-                                ? mapper.fromMovie(tmdb.movie(ref.id()))
-                                : mapper.fromTv(tmdb.tv(ref.id()));
-                    } finally {
-                        permits.release();
-                    }
-                }));
-            }
-        }
-        int failed = 0;
-        for (Map.Entry<Ref, Future<ImportedTitle>> e : futures.entrySet()) {
-            try {
-                out.put(e.getKey(), e.getValue().get());
-            } catch (Exception ex) {
-                failed++;
-                Throwable cause = ex.getCause() != null ? ex.getCause() : ex;
-                if (cause instanceof TmdbException te && te.isNotFound()) {
-                    log.info("{} {} não existe mais na TMDB", e.getKey().type(), e.getKey().id());
-                } else {
-                    log.warn("Falha ao buscar {} {}: {}", e.getKey().type(), e.getKey().id(), cause.getMessage());
-                }
-            }
-        }
-        return failed;
-    }
-
-    record Ref(int id, MediaType type) {}
 }

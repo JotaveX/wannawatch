@@ -97,6 +97,10 @@ public class Title {
     @Column(name = "last_synced_at")
     private Instant lastSyncedAt;
 
+    /** Falso para títulos que existem só para a busca (fora da Home, Swipe, Reels, Match e recomendação). */
+    @Column(name = "in_feeds", nullable = false)
+    private boolean inFeeds = true;
+
     protected Title() {}
 
     public Title(Integer externalId, MediaType mediaType) {
@@ -152,6 +156,10 @@ public class Title {
     public void setTrailerYoutubeKey(String trailerYoutubeKey) { this.trailerYoutubeKey = trailerYoutubeKey; }
     public TitleDetails getDetails() { return details; }
     public void setDetails(TitleDetails details) { this.details = details; }
+
+    public boolean isInFeeds() { return inFeeds; }
+
+    public void setInFeeds(boolean inFeeds) { this.inFeeds = inFeeds; }
     public Instant getCreatedAt() { return createdAt; }
     public Instant getUpdatedAt() { return updatedAt; }
     public Instant getLastSyncedAt() { return lastSyncedAt; }

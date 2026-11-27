@@ -144,7 +144,7 @@ public class MatchService {
         List<Long> participants = jdbc.sql("SELECT user_id FROM match_participant WHERE room_id = :r ORDER BY user_id")
                 .param("r", room.id()).query(Long.class).list();
         Map<String, Object> params = new HashMap<>();
-        String sql = "SELECT t.id FROM title t WHERE t.overview IS NOT NULL"
+        String sql = "SELECT t.id FROM title t WHERE t.in_feeds AND t.overview IS NOT NULL"
                 + SqlFilters.typeAndGenre(room.mediaType(), room.genreSlug(), params);
         List<Long> candidates = jdbc.sql(sql).params(params).query(Long.class).list();
         List<GroupRanking.Ranked> ranked = groupDecks.rank(participants, candidates, room.seed());
@@ -304,7 +304,7 @@ public class MatchService {
         StringBuilder sql = new StringBuilder("""
                 SELECT id, h FROM (
                     SELECT t.id, md5(:seed || ':' || t.id) AS h
-                    FROM title t WHERE t.overview IS NOT NULL
+                    FROM title t WHERE t.in_feeds AND t.overview IS NOT NULL
                       AND NOT EXISTS (SELECT 1 FROM match_vote v
                                       WHERE v.room_id = :room AND v.user_id = :me AND v.title_id = t.id)""");
         sql.append(SqlFilters.typeAndGenre(room.mediaType(), room.genreSlug(), params));

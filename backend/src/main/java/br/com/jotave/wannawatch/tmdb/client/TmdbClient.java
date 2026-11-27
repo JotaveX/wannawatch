@@ -73,6 +73,17 @@ public class TmdbClient {
                 new ParameterizedTypeReference<>() {});
     }
 
+    /** Primeira página da busca da TMDB por filmes, séries e pessoas (sem conteúdo adulto). */
+    public TmdbDto.Page<TmdbDto.SearchItem> searchMulti(String query) {
+        return get(u -> u.path("/search/multi")
+                        .queryParam("query", "{query}")
+                        .queryParam("language", props.language())
+                        .queryParam("include_adult", false)
+                        .queryParam("page", 1)
+                        .build(query),
+                new ParameterizedTypeReference<>() {});
+    }
+
     public TmdbDto.MovieDetails movie(int id) {
         return get(u -> u.path("/movie/{id}")
                         .queryParam("language", props.language())

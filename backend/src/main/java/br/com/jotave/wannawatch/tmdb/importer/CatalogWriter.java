@@ -29,6 +29,9 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class CatalogWriter {
 
+    /** Chave da trava (pg_advisory_xact_lock) que deixa uma gravação de título por vez. */
+    private static final long WRITE_LOCK_KEY = 0x77_77_74_69_74_6CL; // "wwtitl"
+
     private final GenreRepository genres;
     private final TitleRepository titles;
     private final PersonRepository people;
@@ -90,11 +93,26 @@ public class CatalogWriter {
         return toSave.size();
     }
 
-    /** Cria ou atualiza um título (pela dupla external_id + tipo) com gêneros e créditos. */
+    /**
+     * Cria ou atualiza um título (pela dupla external_id + tipo) com gêneros e créditos.
+     *
+     * <p>{@code inFeeds}: true para os títulos das listas (entram nos feeds, e um título que antes
+     * era só da busca passa a entrar também); false para os que vêm do export ou da busca na TMDB,
+     * que só valem para títulos novos (nunca tiram dos feeds um que já estava lá).
+     *
+     * <p>As gravações são feitas uma por vez (trava do Postgres até o commit): a importação das
+     * listas, a do export e a da busca podem rodar juntas e gravar a mesma pessoa ou o mesmo título.
+     */
     @Transactional
-    public Long upsertTitle(ImportedTitle in, Instant now) {
+    public Long upsertTitle(ImportedTitle in, Instant now, boolean inFeeds) {
+        jdbc.sql("SELECT pg_advisory_xact_lock(:key)").param("key", WRITE_LOCK_KEY).query().listOfRows();
         Title t = titles.findByExternalIdAndMediaType(in.externalId(), in.mediaType())
-                .orElseGet(() -> new Title(in.externalId(), in.mediaType()));
+                .orElseGet(() -> {
+                    Title created = new Title(in.externalId(), in.mediaType());
+                    created.setInFeeds(inFeeds);
+                    return created;
+                });
+        if (inFeeds) t.setInFeeds(true);
         t.setTitle(in.title());
         t.setOriginalTitle(in.originalTitle());
         t.setTagline(in.tagline());

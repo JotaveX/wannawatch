@@ -111,10 +111,10 @@ public class FeedService {
         }
     }
 
-    /** Todos os títulos com sinopse que passam nos filtros (o catálogo tem poucas centenas). */
+    /** Todos os títulos dos feeds com sinopse que passam nos filtros (poucas centenas). */
     private List<Long> candidates(MediaType type, String genre) {
         Map<String, Object> params = new HashMap<>();
-        String sql = "SELECT t.id FROM title t WHERE t.overview IS NOT NULL" + SqlFilters.typeAndGenre(type, genre, params);
+        String sql = "SELECT t.id FROM title t WHERE t.in_feeds AND t.overview IS NOT NULL" + SqlFilters.typeAndGenre(type, genre, params);
         return jdbc.sql(sql).params(params).query(Long.class).list();
     }
 
@@ -133,7 +133,7 @@ public class FeedService {
                            :wp * percent_rank() OVER (ORDER BY t.popularity)
                            + CASE WHEN EXISTS (SELECT 1 FROM title_video v WHERE v.title_id = t.id AND\s""");
         sql.append(ReelVideos.PLAYABLE).append(") THEN :wv ELSE 0 END AS k");
-        sql.append(" FROM title t WHERE t.overview IS NOT NULL");
+        sql.append(" FROM title t WHERE t.in_feeds AND t.overview IS NOT NULL");
         sql.append(SqlFilters.typeAndGenre(type, genre, params));
         sql.append(") r");
         if (after != null) {
@@ -157,7 +157,7 @@ public class FeedService {
         StringBuilder sql = new StringBuilder("""
                 SELECT id, h FROM (
                     SELECT t.id, md5(:seed || ':' || t.id) AS h
-                    FROM title t WHERE t.overview IS NOT NULL""");
+                    FROM title t WHERE t.in_feeds AND t.overview IS NOT NULL""");
         sql.append(SqlFilters.typeAndGenre(type, genre, params));
         sql.append(") s");
         if (after != null) {

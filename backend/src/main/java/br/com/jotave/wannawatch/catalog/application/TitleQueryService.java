@@ -132,7 +132,7 @@ public class TitleQueryService {
                 SELECT t.id
                 FROM title t JOIN title_genre tg ON tg.title_id = t.id
                 WHERE tg.genre_id IN (SELECT genre_id FROM title_genre WHERE title_id = :id)
-                  AND t.id <> :id
+                  AND t.id <> :id AND t.in_feeds
                 GROUP BY t.id, t.media_type, t.popularity
                 ORDER BY count(*) DESC, (t.media_type = :type) DESC, t.popularity DESC, t.id
                 LIMIT :limit""")
